@@ -159,13 +159,11 @@ export default function Sidebar() {
             })}
           </nav>
 
-          {/* Account Section - Simplified without Clerk */}
+          {/* Decorative footer element instead of login section */}
           <div className="px-3 py-4 mt-auto border-t border-white/[0.08]">
-            <Link href="/login">
-              <button className="w-full rounded-lg bg-gradient-to-r from-purple-500/20 to-blue-500/10 px-4 py-2.5 text-[13px] font-medium text-white/90 hover:text-white border border-white/10 hover:border-white/20 transition-all duration-200 shadow-md shadow-black/10 hover:scale-[1.02]">
-                Sign in
-              </button>
-            </Link>
+            <div className="flex items-center justify-center opacity-60 text-[13px] text-white/70">
+              Gospel Unbound &copy; {new Date().getFullYear()}
+            </div>
           </div>
         </div>
       </aside>

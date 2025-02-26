@@ -121,8 +121,7 @@ function NewsletterSection(): React.ReactNode {
 }
 
 export default function Home() {
-  const backgroundVideoRef = useVideoAutoplay();
-  const heroVideoRef = useVideoAutoplay();
+  const videoRef = useVideoAutoplay();
   
   const quickLinks = [
     {
@@ -156,7 +155,7 @@ export default function Home() {
       {/* Hero Background */}
       <div className="absolute inset-0 z-0">
         <video
-          ref={backgroundVideoRef}
+          ref={videoRef}
           src="/videos/hero-bg.mp4"
           className="object-cover w-full h-full opacity-15"
           autoPlay
@@ -174,10 +173,10 @@ export default function Home() {
         <div className="px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
           <div className="mx-auto max-w-[90rem]">
             <div className="relative overflow-hidden rounded-[1.5rem] sm:rounded-[2.5rem] border border-white/[0.08] bg-black/40 backdrop-blur-xl shadow-2xl shadow-black/20">
-              {/* Background Video */}
+              {/* Hero Content Background */}
               <div className="absolute inset-0 z-0">
                 <video
-                  ref={heroVideoRef}
+                  ref={videoRef}
                   src="/videos/hero-bg.mp4"
                   className="object-cover w-full h-full opacity-100"
                   autoPlay
@@ -186,6 +185,7 @@ export default function Home() {
                   playsInline
                   preload="auto"
                 />
+                {/* Using CSS for styling instead of a duplicate video */}
                 <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-black/40 to-transparent" />
                 {/* Dynamic Gradient Overlay */}
                 <div 
