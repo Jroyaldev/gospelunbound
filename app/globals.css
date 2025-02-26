@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  @apply bg-[#FAFAFA];
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  input[type="search"] {
+    @apply bg-white;
+  }
+
+  button {
+    @apply font-medium transition-all;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-black text-white rounded-lg font-medium 
+           transition-all hover:bg-black/90 hover:shadow-md 
+           active:transform active:scale-[0.98];
+  }
+
+  .nav-link {
+    @apply flex items-center gap-2.5 text-gray-600 hover:text-black 
+           transition-all rounded-lg py-2 px-3
+           hover:bg-gray-50 active:bg-gray-100
+           relative after:absolute after:inset-0 after:rounded-lg
+           after:ring-2 after:ring-black/[0.04] after:ring-inset;
+  }
+
+  .nav-link.active {
+    @apply text-blue-600 bg-blue-50/50 hover:bg-blue-50 
+           after:ring-blue-100;
+  }
+
+  /* Card hover effects */
+  .hover-card-lift {
+    @apply transition-all duration-200
+           hover:-translate-y-0.5 hover:shadow-lg
+           active:translate-y-0 active:shadow-md;
+  }
+
+  /* Glass morphism effects */
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-xl;
+  }
+
+  /* Gradient backgrounds */
+  .gradient-fade {
+    @apply bg-gradient-to-b from-white to-gray-50;
+  }
+
+  /* Course card specific styles */
+  .course-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
+  .course-card {
+    @apply rounded-xl border border-gray-100 bg-white
+           transition-all duration-200
+           hover:shadow-lg hover:-translate-y-0.5;
+  }
+
+  .course-tag {
+    @apply text-xs px-3 py-1 rounded-full
+           bg-blue-50 text-blue-600
+           transition-colors;
+  }
+}
