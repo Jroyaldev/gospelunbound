@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, FileText, Video, Headphones, FileJson, Book, Image as ImageIcon, X, ChevronDown, Calendar, Clock, User } from 'lucide-react';
+import { Search, Filter, FileText, Video, Headphones, FileJson, Book, Image as ImageIcon, X, ChevronDown, Calendar, Clock, User, RotateCcw, Check } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -105,7 +105,7 @@ export default function ResourcesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState({
     date: 'all',
     author: 'all',
@@ -154,6 +154,14 @@ export default function ResourcesPage() {
       author: 'all',
       readTime: 'all'
     });
+  };
+
+  // Handle filter change
+  const handleFilterChange = (key: keyof typeof advancedFilters, value: string) => {
+    setAdvancedFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
   };
 
   const filteredResources = resources.filter(resource => {
@@ -211,389 +219,439 @@ export default function ResourcesPage() {
 
   // Skeleton loader for resource cards
   const ResourceCardSkeleton = () => (
-    <div className="relative rounded-2xl overflow-hidden h-[400px] bg-black/40">
-      <div className="absolute inset-0 bg-white/5 backdrop-blur-xl" />
-      <div className="relative h-48 bg-white/5 animate-pulse" />
-      <div className="relative p-6 bg-black/40 h-[208px] flex flex-col">
-        <div className="h-4 w-32 bg-white/10 rounded animate-pulse mb-3" />
-        <div className="h-6 w-3/4 bg-white/10 rounded animate-pulse mb-2" />
-        <div className="h-4 w-full bg-white/10 rounded animate-pulse mb-2" />
-        <div className="h-4 w-2/3 bg-white/10 rounded animate-pulse mb-4" />
+    <div className="relative rounded-2xl overflow-hidden h-[400px] bg-white border border-border shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
+      <div className="h-48 bg-[#F5F0E8]/50 animate-pulse" />
+      <div className="p-6 flex flex-col">
+        <div className="h-4 w-32 bg-[#F5F0E8] animate-pulse mb-3" />
+        <div className="h-6 w-3/4 bg-[#F5F0E8] animate-pulse mb-2" />
+        <div className="h-4 w-full bg-[#F5F0E8] animate-pulse mb-2" />
+        <div className="h-4 w-2/3 bg-[#F5F0E8] animate-pulse mb-4" />
         <div className="mt-auto flex justify-between">
-          <div className="h-4 w-24 bg-white/10 rounded animate-pulse" />
-          <div className="h-4 w-24 bg-white/10 rounded animate-pulse" />
+          <div className="h-4 w-24 bg-[#F5F0E8] animate-pulse" />
+          <div className="h-4 w-24 bg-[#F5F0E8] animate-pulse" />
         </div>
       </div>
-      <div className="absolute inset-0 rounded-2xl border border-white/[0.1]" />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/20 via-black to-black pb-20">
-      {/* Background subtle patterns */}
-      <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.015] pointer-events-none mix-blend-overlay" />
-      <div className="fixed inset-0 bg-gradient-to-b from-slate-500/5 via-transparent to-transparent pointer-events-none" />
-      
+    <main className="min-h-screen bg-background text-foreground">
       {/* Content */}
-      <div className="relative">
-        <div className="relative px-6 lg:px-8 py-24 mx-auto max-w-[90rem]">
-          {/* Header */}
-          <div className="flex flex-col items-center text-center mb-16">
-            <h1 className="text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80 mb-6">
-              Resources
-            </h1>
-            <p className="text-lg text-white/60 max-w-2xl">
-              Access our curated library of progressive faith resources and study materials
-            </p>
+      <div className="w-full px-4 md:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
+        <div className="max-w-[90rem] mx-auto">
+          {/* Header with decorative background - updated to match courses page */}
+          <div className="relative rounded-xl overflow-hidden mb-8 mx-4 sm:mx-6 lg:mx-8">
+            <div className="absolute inset-0 bg-[#F5F0E8] opacity-70"></div>
+            <div className="relative z-10 px-6 py-8 md:px-8 md:py-10">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-white/90 text-foreground/70 mb-4">
+                <span>Curated content for progressive faith</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground mb-2">
+                Resources
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-md">
+                Access our curated library of progressive faith resources and study materials
+              </p>
+            </div>
           </div>
-
+          
           {/* Search and Filter Bar */}
-          <div className="flex flex-col space-y-4 mb-8">
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
-              <div className="flex-1 relative group">
-                <div className="absolute inset-0 bg-white/5 rounded-2xl blur-md transition-all duration-300 group-hover:bg-white/10" />
-                <div className="relative flex items-center bg-black/20 rounded-2xl">
+          <div className="px-5 sm:px-8 lg:px-10">
+            <div className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0 mb-8">
+              {/* Search */}
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="relative flex-1 md:min-w-[280px]">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Search size={16} strokeWidth={1.5} className="text-muted-foreground" />
+                  </div>
                   <input
                     type="text"
                     placeholder="Search resources..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl pl-6 pr-12 py-4 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-slate-500/30 focus:border-slate-500/30 transition-all duration-300"
+                    className="block w-full py-2.5 pl-10 pr-3 border border-border rounded-full bg-white text-foreground placeholder-muted-foreground focus:border-[#E8D5C8] focus:ring-[#E8D5C8] transition-all duration-200 min-h-[44px]"
                   />
-                  {searchQuery && (
-                    <button 
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-12 p-2 text-white/40 hover:text-white/70 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                  <div className="absolute right-4 p-2 rounded-xl bg-white/5 backdrop-blur-sm">
-                    <Search className="w-4 h-4 text-white/60" />
-                  </div>
                 </div>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-0 bg-white/5 rounded-2xl blur-md transition-all duration-300 group-hover:bg-white/10" />
-                <button 
-                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  className="relative w-full md:w-auto flex items-center justify-between gap-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl px-6 py-4 text-white hover:bg-white/[0.12] transition-all duration-300"
+                
+                <button
+                  onClick={() => setShowFilters(true)}
+                  className="flex items-center justify-center min-h-[44px] px-4 py-2 bg-white border border-border rounded-full text-foreground hover:bg-[#F5F0E8]/30 transition-all duration-200"
                 >
-                  <div className="flex items-center gap-3">
-                    <Filter className="w-4 h-4" />
-                    <span className="text-sm font-medium">Advanced Filters</span>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showAdvancedFilters ? 'rotate-180' : ''}`} />
+                  <Filter size={16} strokeWidth={1.5} className="mr-2" />
+                  <span className="text-sm">Filters</span>
                 </button>
               </div>
             </div>
-            
-            {/* Advanced Filter panel */}
-            <AnimatePresence>
-              {showAdvancedFilters && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
-                >
-                  <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Date filter */}
-                      <div>
-                        <h3 className="text-white/80 font-medium mb-3">Date</h3>
-                        <div className="space-y-2">
-                          {filterOptions.date.map(option => (
-                            <button
-                              key={option.id}
-                              onClick={() => setAdvancedFilters({...advancedFilters, date: option.id})}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                advancedFilters.date === option.id
-                                  ? 'bg-white/20 text-white'
-                                  : 'text-white/60 hover:bg-white/10 hover:text-white/80'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Author filter */}
-                      <div>
-                        <h3 className="text-white/80 font-medium mb-3">Author</h3>
-                        <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                          {filterOptions.author.map(option => (
-                            <button
-                              key={option.id}
-                              onClick={() => setAdvancedFilters({...advancedFilters, author: option.id})}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                advancedFilters.author === option.id
-                                  ? 'bg-white/20 text-white'
-                                  : 'text-white/60 hover:bg-white/10 hover:text-white/80'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Read Time filter */}
-                      <div>
-                        <h3 className="text-white/80 font-medium mb-3">Length</h3>
-                        <div className="space-y-2">
-                          {filterOptions.readTime.map(option => (
-                            <button
-                              key={option.id}
-                              onClick={() => setAdvancedFilters({...advancedFilters, readTime: option.id})}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                advancedFilters.readTime === option.id
-                                  ? 'bg-white/20 text-white'
-                                  : 'text-white/60 hover:bg-white/10 hover:text-white/80'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Reset filters button */}
-                    <div className="mt-6 flex justify-end">
-                      <button
-                        onClick={resetFilters}
-                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg text-sm transition-colors"
-                      >
-                        Reset All Filters
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            
-            {/* Active filters display */}
-            {(selectedType !== 'all' || advancedFilters.date !== 'all' || advancedFilters.author !== 'all' || advancedFilters.readTime !== 'all' || searchQuery) && (
-              <div className="flex flex-wrap items-center gap-2 pt-2">
-                <span className="text-white/50 text-sm">Active filters:</span>
-                
+          </div>
+          
+          {/* Active filters */}
+          {(selectedType !== 'all' || advancedFilters.date !== 'all' || advancedFilters.author !== 'all' || advancedFilters.readTime !== 'all' || searchQuery) && (
+            <div className="px-5 sm:px-8 lg:px-10 mb-6">
+              <div className="flex flex-wrap items-center gap-2">
                 {searchQuery && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                    <span className="text-white/80 text-xs">Search: {searchQuery}</span>
-                    <button onClick={() => setSearchQuery('')} className="text-white/50 hover:text-white/80">
-                      <X className="w-3 h-3" />
+                  <div className="flex items-center gap-1.5 bg-[#F5F0E8]/30 rounded-full px-3 py-1.5">
+                    <span className="text-foreground/80 text-xs">Search: {searchQuery}</span>
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="text-foreground/50 hover:text-foreground transition-colors"
+                    >
+                      <X size={14} strokeWidth={1.5} />
                     </button>
                   </div>
                 )}
                 
                 {selectedType !== 'all' && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                    <span className="text-white/80 text-xs">
-                      Type: {resourceTypes.find(t => t.id === selectedType)?.label}
-                    </span>
+                  <div className="flex items-center gap-1.5 bg-[#F5F0E8]/30 rounded-full px-3 py-1.5">
+                    <span className="text-foreground/80 text-xs">Type: {resourceTypes.find(t => t.id === selectedType)?.label}</span>
                     <button 
                       onClick={() => setSelectedType('all')}
-                      className="text-white/50 hover:text-white/80"
+                      className="text-foreground/50 hover:text-foreground transition-colors"
                     >
-                      <X className="w-3 h-3" />
+                      <X size={14} strokeWidth={1.5} />
                     </button>
                   </div>
                 )}
                 
                 {advancedFilters.date !== 'all' && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                    <span className="text-white/80 text-xs">
-                      Date: {filterOptions.date.find(o => o.id === advancedFilters.date)?.label}
-                    </span>
+                  <div className="flex items-center gap-1.5 bg-[#F5F0E8]/30 rounded-full px-3 py-1.5">
+                    <span className="text-foreground/80 text-xs">Date: {advancedFilters.date}</span>
                     <button 
                       onClick={() => setAdvancedFilters({...advancedFilters, date: 'all'})}
-                      className="text-white/50 hover:text-white/80"
+                      className="text-foreground/50 hover:text-foreground transition-colors"
                     >
-                      <X className="w-3 h-3" />
+                      <X size={14} strokeWidth={1.5} />
                     </button>
                   </div>
                 )}
                 
                 {advancedFilters.author !== 'all' && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                    <span className="text-white/80 text-xs">
-                      Author: {filterOptions.author.find(o => o.id === advancedFilters.author)?.label}
-                    </span>
+                  <div className="flex items-center gap-1.5 bg-[#F5F0E8]/30 rounded-full px-3 py-1.5">
+                    <span className="text-foreground/80 text-xs">Author: {advancedFilters.author}</span>
                     <button 
                       onClick={() => setAdvancedFilters({...advancedFilters, author: 'all'})}
-                      className="text-white/50 hover:text-white/80"
+                      className="text-foreground/50 hover:text-foreground transition-colors"
                     >
-                      <X className="w-3 h-3" />
+                      <X size={14} strokeWidth={1.5} />
                     </button>
                   </div>
                 )}
                 
                 {advancedFilters.readTime !== 'all' && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                    <span className="text-white/80 text-xs">
-                      Length: {filterOptions.readTime.find(o => o.id === advancedFilters.readTime)?.label}
-                    </span>
+                  <div className="flex items-center gap-1.5 bg-[#F5F0E8]/30 rounded-full px-3 py-1.5">
+                    <span className="text-foreground/80 text-xs">Read time: {advancedFilters.readTime}</span>
                     <button 
                       onClick={() => setAdvancedFilters({...advancedFilters, readTime: 'all'})}
-                      className="text-white/50 hover:text-white/80"
+                      className="text-foreground/50 hover:text-foreground transition-colors"
                     >
-                      <X className="w-3 h-3" />
+                      <X size={14} strokeWidth={1.5} />
                     </button>
                   </div>
                 )}
                 
-                <button 
+                <button
                   onClick={resetFilters}
-                  className="text-white/50 hover:text-white/80 text-xs underline"
+                  className="flex items-center gap-1.5 text-xs text-foreground/60 hover:text-foreground/80 transition-colors"
                 >
-                  Clear all
+                  <XCircle size={14} strokeWidth={1.5} />
+                  <span>Clear all</span>
                 </button>
               </div>
-            )}
-          </div>
-
-          {/* Resource Type Tabs */}
-          <div className="flex flex-wrap gap-2 mb-12 overflow-x-auto pb-2 custom-scrollbar">
-            {resourceTypes.map((type) => (
-              <button
-                key={type.id}
-                onClick={() => setSelectedType(type.id)}
-                className={`
-                  relative group flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-300
-                  ${selectedType === type.id 
-                    ? 'bg-slate-500/20 text-slate-300' 
-                    : 'bg-white/[0.08] text-white/60 hover:bg-white/[0.12] hover:text-white/90'}
-                `}
-              >
-                <type.icon className="h-4 w-4" />
-                {type.label}
-                <div className="absolute inset-0 bg-white/5 rounded-xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            ))}
-          </div>
-
-          {/* Resources Grid */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <ResourceCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : filteredResources.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredResources.map((resource) => {
-                const ResourceIcon = resourceTypes.find(t => t.id === resource.type)?.icon || FileText;
-                return (
-                  <motion.div
-                    key={resource.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="group"
-                  >
-                    {/* Card container with hover animation */}
-                    <motion.div
-                      whileHover={{ scale: 1.02, y: -5 }}
-                      transition={{ duration: 0.3 }}
-                      className="relative rounded-2xl overflow-hidden h-[400px] bg-black/40 will-change-transform"
-                    >
-                      {/* Blur effect container */}
-                      <div className="absolute inset-0 bg-white/5 backdrop-blur-xl" />
-                      
-                      {/* Content wrapper */}
-                      <div className="relative block h-full">
-                        {/* Image container - static, no transform */}
-                        <div className="relative h-48">
-                          <div className="absolute inset-0 bg-black/20" />
-                          <Image
-                            src={resource.image}
-                            alt={resource.title}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-                        </div>
-                        
-                        {/* Content section */}
-                        <div className="relative p-6 bg-black/40 h-[208px] flex flex-col">
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="inline-flex items-center gap-1.5 bg-white/[0.08] backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white/90">
-                              <ResourceIcon className="h-3.5 w-3.5" />
-                              {resource.type.charAt(0).toUpperCase() + resource.type.slice(1).replace('-', ' ')}
-                            </span>
-                            <span className="text-white/50 text-xs flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {resource.readTime}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-slate-300 transition-colors line-clamp-1">{resource.title}</h3>
-                          <p className="text-white/70 text-sm mb-4 line-clamp-2 flex-grow">{resource.description}</p>
-                          <div className="flex items-center justify-between text-sm text-white/50">
-                            <span className="flex items-center gap-1.5">
-                              <User className="h-3.5 w-3.5" />
-                              {resource.author}
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="h-3.5 w-3.5" />
-                              <span>{resource.date}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Hover overlay with "View Resource" button */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="px-4 py-2 bg-white/20 backdrop-blur-md rounded-lg text-white text-sm font-medium transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                            View Resource
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Border overlay */}
-                      <div className="absolute inset-0 rounded-2xl border border-white/[0.1] group-hover:border-white/[0.2] transition-colors duration-300 pointer-events-none" />
-                    </motion.div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
-              <div className="text-white/40 mb-4">
-                <FileText className="w-12 h-12" />
-              </div>
-              <h3 className="text-xl font-medium text-white/80 mb-2">No resources found</h3>
-              <p className="text-white/60 text-center max-w-md mb-6">We couldn't find any resources matching your current filters.</p>
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-              >
-                Reset Filters
-              </button>
             </div>
           )}
           
-          {/* Add custom scrollbar styles */}
-          <style jsx global>{`
-            .custom-scrollbar::-webkit-scrollbar {
-              width: 6px;
-              height: 6px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-track {
-              background: rgba(255, 255, 255, 0.05);
-              border-radius: 10px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: rgba(255, 255, 255, 0.1);
-              border-radius: 10px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: rgba(255, 255, 255, 0.2);
-            }
-          `}</style>
+          {/* Mobile Filters Drawer */}
+          <AnimatePresence>
+            {showFilters && (
+              <>
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40"
+                  onClick={() => setShowFilters(false)}
+                />
+                
+                {/* Drawer */}
+                <motion.div
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  className="fixed top-0 right-0 h-full w-[85%] max-w-md bg-background border-l border-border z-50 overflow-y-auto"
+                >
+                  <div className="sticky top-0 bg-background border-b border-border z-10 flex justify-between items-center p-4">
+                    <h2 className="font-medium text-lg tracking-tight">Filters</h2>
+                    <button 
+                      onClick={() => setShowFilters(false)}
+                      className="p-2 text-foreground hover:bg-[#F5F0E8]/50 rounded-full transition-colors"
+                    >
+                      <X size={20} strokeWidth={1.5} />
+                      <span className="sr-only">Close</span>
+                    </button>
+                  </div>
+                  
+                  <div className="p-4 space-y-6">
+                    {/* Resource Type Filter */}
+                    <div className="space-y-3">
+                      <h3 className="font-medium text-foreground/90 tracking-tight">Resource Type</h3>
+                      <div className="grid grid-cols-1 gap-2 ml-1">
+                        {resourceTypes.map((type) => (
+                          <button
+                            key={type.id}
+                            onClick={() => setSelectedType(type.id)}
+                            className={`flex items-center justify-between w-full px-3 py-2 text-left rounded-md transition-colors ${
+                              selectedType === type.id ? 
+                                type.id === 'articles' ? 'bg-[#F5F0E8] text-foreground' : 
+                                type.id === 'videos' ? 'bg-[#E8D5C8] text-foreground' : 
+                                type.id === 'audios' ? 'bg-[#D7A392]/70 text-white' :
+                                type.id === 'study-guides' ? 'bg-[#F5F0E8]/80 text-foreground' :
+                                type.id === 'pdfs' ? 'bg-[#D7A392]/80 text-white' :
+                                type.id === 'infographics' ? 'bg-[#E8D5C8]/90 text-foreground' :
+                                'bg-[#F5F0E8] text-foreground/70'
+                              : 'bg-white border border-border text-muted-foreground hover:text-foreground hover:bg-[#F5F0E8]/10'
+                            }`}
+                          >
+                            <div className="flex items-center">
+                              <type.icon size={16} strokeWidth={1.5} className="mr-2" />
+                              <span>{type.label}</span>
+                            </div>
+                            {selectedType === type.id && (
+                              <Check size={16} strokeWidth={1.5} className="text-[#D7A392]" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Date Filter */}
+                    <div className="space-y-3">
+                      <h3 className="font-medium text-foreground/90 tracking-tight">Date</h3>
+                      <div className="grid grid-cols-1 gap-2 ml-1">
+                        {filterOptions.date.map((option) => (
+                          <button
+                            key={option.id}
+                            onClick={() => handleFilterChange('date', option.id)}
+                            className={`flex items-center justify-between w-full px-3 py-2 text-left rounded-md transition-colors ${
+                              advancedFilters.date === option.id
+                                ? 'bg-[#F5F0E8] text-foreground font-medium'
+                                : 'hover:bg-[#F5F0E8]/30 text-muted-foreground'
+                            }`}
+                          >
+                            <span>{option.label}</span>
+                            {advancedFilters.date === option.id && (
+                              <Check size={16} strokeWidth={1.5} className="text-[#D7A392]" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Author Filter */}
+                    <div className="space-y-3">
+                      <h3 className="font-medium text-foreground/90 tracking-tight">Author</h3>
+                      <div className="grid grid-cols-1 gap-2 ml-1 max-h-48 overflow-y-auto">
+                        {filterOptions.author.map((option) => (
+                          <button
+                            key={option.id}
+                            onClick={() => handleFilterChange('author', option.id)}
+                            className={`flex items-center justify-between w-full px-3 py-2 text-left rounded-md transition-colors ${
+                              advancedFilters.author === option.id
+                                ? 'bg-[#F5F0E8] text-foreground font-medium'
+                                : 'hover:bg-[#F5F0E8]/30 text-muted-foreground'
+                            }`}
+                          >
+                            <span>{option.label}</span>
+                            {advancedFilters.author === option.id && (
+                              <Check size={16} strokeWidth={1.5} className="text-[#D7A392]" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Read Time Filter */}
+                    <div className="space-y-3">
+                      <h3 className="font-medium text-foreground/90 tracking-tight">Length</h3>
+                      <div className="grid grid-cols-1 gap-2 ml-1">
+                        {filterOptions.readTime.map((option) => (
+                          <button
+                            key={option.id}
+                            onClick={() => handleFilterChange('readTime', option.id)}
+                            className={`flex items-center justify-between w-full px-3 py-2 text-left rounded-md transition-colors ${
+                              advancedFilters.readTime === option.id
+                                ? 'bg-[#F5F0E8] text-foreground font-medium'
+                                : 'hover:bg-[#F5F0E8]/30 text-muted-foreground'
+                            }`}
+                          >
+                            <span>{option.label}</span>
+                            {advancedFilters.readTime === option.id && (
+                              <Check size={16} strokeWidth={1.5} className="text-[#D7A392]" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="sticky bottom-0 bg-background border-t border-border p-4">
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="w-full py-2.5 px-4 bg-[#D7A392] text-white rounded-full transition-all hover:bg-[#D7A392]/90"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* Resource Type Filters */}
+          <div className="px-5 sm:px-8 lg:px-10 mb-8 overflow-x-auto pb-2">
+            <div className="flex space-x-2 min-w-max">
+              {resourceTypes.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setSelectedType(type.id)}
+                  className={`flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 min-h-[44px] ${
+                    selectedType === type.id ? 
+                      type.id === 'articles' ? 'bg-[#F5F0E8] text-foreground' : 
+                      type.id === 'videos' ? 'bg-[#E8D5C8] text-foreground' : 
+                      type.id === 'audios' ? 'bg-[#D7A392]/70 text-white' :
+                      type.id === 'study-guides' ? 'bg-[#F5F0E8]/80 text-foreground' :
+                      type.id === 'pdfs' ? 'bg-[#D7A392]/80 text-white' :
+                      type.id === 'infographics' ? 'bg-[#E8D5C8]/90 text-foreground' :
+                      'bg-[#F5F0E8] text-foreground/70'
+                    : 'bg-white border border-border text-muted-foreground hover:text-foreground hover:bg-[#F5F0E8]/10'
+                  }`}
+                >
+                  <type.icon className="w-4 h-4" strokeWidth={1.5} />
+                  <span className="tracking-tight">{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Resource Cards */}
+          <div className="px-5 sm:px-8 lg:px-10 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {isLoading ? (
+                // Skeleton loaders
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="relative rounded-2xl overflow-hidden bg-white border border-border shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]">
+                    <div className="h-48 bg-[#F5F0E8]/50 animate-pulse" />
+                    <div className="p-6 flex flex-col">
+                      <div className="h-4 w-32 bg-[#F5F0E8] animate-pulse mb-3" />
+                      <div className="h-6 w-3/4 bg-[#F5F0E8] animate-pulse mb-2" />
+                      <div className="h-4 w-full bg-[#F5F0E8] animate-pulse mb-2" />
+                      <div className="h-4 w-2/3 bg-[#F5F0E8] animate-pulse mb-4" />
+                      <div className="mt-auto flex justify-between">
+                        <div className="h-4 w-24 bg-[#F5F0E8] animate-pulse" />
+                        <div className="h-4 w-24 bg-[#F5F0E8] animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : filteredResources.length > 0 ? (
+                // Resource cards
+                filteredResources.map((resource) => (
+                  <div key={resource.id} className="group relative rounded-2xl overflow-hidden border border-border bg-white hover:shadow-md transition-all duration-300 hover:translate-y-[-2px] hover:border-[#D7A392]/40">
+                    <div className="aspect-video relative">
+                      <Image
+                        src={resource.image}
+                        alt={resource.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/40"></div>
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-center mb-3 text-xs text-muted-foreground">
+                        <div className={`rounded-full px-3 py-1 text-xs font-medium ${
+                          resource.type === 'articles' ? 'bg-[#E8D5C8]/20 text-[#E8D5C8]' : 
+                          resource.type === 'videos' ? 'bg-[#D7A392]/20 text-[#D7A392]' : 
+                          resource.type === 'audios' ? 'bg-[#D2D3C9]/20 text-[#D2D3C9]' : 
+                          resource.type === 'study-guides' ? 'bg-[#F5F0E8]/20 text-foreground/70' : 
+                          'bg-[#F5F0E8]/20 text-foreground/70'
+                        }`}>
+                          <div className="flex items-center">
+                            {resource.type === 'articles' && <FileText className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />}
+                            {resource.type === 'videos' && <Video className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />}
+                            {resource.type === 'study-guides' && <Book className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />}
+                            {resource.type === 'audios' && <Headphones className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />}
+                            {resource.type === 'infographics' && <ImageIcon className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />}
+                            {resource.type === 'pdfs' && <FileJson className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />}
+                            <span>{resource.readTime}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <h3 className="text-lg font-medium text-foreground mb-2 tracking-tight">{resource.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">{resource.description}</p>
+                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-border text-xs text-muted-foreground">
+                        <div className="flex items-center">
+                          <User className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />
+                          <span>{resource.author}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Calendar className="w-3.5 h-3.5 mr-1.5" strokeWidth={1.5} />
+                          <span>
+                            {new Date(resource.date).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <a href="#" className="absolute inset-0" aria-label={`View ${resource.title}`}>
+                      <span className="sr-only">View resource</span>
+                    </a>
+                  </div>
+                ))
+              ) : (
+                // No results message
+                <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-16 h-16 rounded-full bg-[#F5F0E8] flex items-center justify-center mb-4">
+                    <Search className="w-8 h-8 text-[#E8D5C8]" strokeWidth={1.5} />
+                  </div>
+                  <h3 className="text-xl font-medium text-foreground mb-2">No resources found</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    We couldn't find any resources matching your current filters. Try adjusting your search criteria.
+                  </p>
+                  <button
+                    onClick={resetFilters}
+                    className="flex items-center gap-2 border border-border rounded-full px-6 py-3 text-sm font-medium text-foreground hover:bg-[#F5F0E8]/10 transition-all duration-200"
+                  >
+                    <X className="w-4 h-4" strokeWidth={1.5} />
+                    Clear all filters
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex justify-center items-center space-x-2 mt-8">
+              <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">
+                <span className="sr-only">Previous page</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+              </button>
+              <button className="inline-flex items-center justify-center rounded-full w-10 h-10 text-sm bg-[#E8D5C8] text-foreground">1</button>
+              <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">2</button>
+              <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">3</button>
+              <span className="text-muted-foreground mx-1">...</span>
+              <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">8</button>
+              <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">
+                <span className="sr-only">Next page</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

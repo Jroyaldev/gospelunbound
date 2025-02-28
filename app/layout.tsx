@@ -3,7 +3,17 @@ import './globals.css';
 import Sidebar from './components/Sidebar';
 import LoadingState from './components/LoadingState';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+  weight: ['400', '500', '600', '700'],
+});
+
+export const metadata = {
+  title: 'Gospel Unbound | Exploring Modern Faith',
+  description: 'Progressive Christian perspectives that bridge ancient wisdom with modern understanding through courses, resources and community.',
+};
 
 export default function RootLayout({
   children,
@@ -11,14 +21,42 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className={`${inter.className} h-full bg-black antialiased`}>
-        <LoadingState />
-        <div className="flex h-full">
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+      </head>
+      <body className="text-foreground h-full antialiased">
+        <div className="flex h-full bg-background selection:bg-foreground/10">
+          {/* Sidebar */}
           <Sidebar />
-          <main className="flex-1 lg:pl-64 w-full relative z-20">
-            {children}
-          </main>
+          
+          {/* Main content area */}
+          <div className="flex flex-col min-h-screen w-full lg:pl-64">
+            <main className="grow">
+              <LoadingState />
+              {children}
+            </main>
+            
+            {/* Footer */}
+            <footer className="border-t border-border py-6 px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground bg-background">
+              <div className="mx-auto max-w-[90rem]">
+                <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4">
+                  <p> {new Date().getFullYear()} Gospel Unbound. All rights reserved.</p>
+                  <div className="flex items-center gap-4">
+                    <a href="/privacy" className="transition hover:text-foreground">
+                      Privacy
+                    </a>
+                    <a href="/terms" className="transition hover:text-foreground">
+                      Terms
+                    </a>
+                    <a href="/contact" className="transition hover:text-foreground">
+                      Contact
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </footer>
+          </div>
         </div>
       </body>
     </html>

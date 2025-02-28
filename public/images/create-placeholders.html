@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Placeholder Images</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .controls { margin: 20px 0; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        canvas { border: 1px solid #ddd; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Placeholder Image Generator</h1>
+    <div class="controls">
+        <button id="generateBtn">Generate All Placeholders</button>
+    </div>
+    <div id="canvasContainer"></div>
+
+    <script>
+        const placeholders = [
+            { name: 'course-preview.jpg', width: 800, height: 450, bgColor: '#e6f7ff', textColor: '#0066cc', text: 'Course Preview' },
+            { name: 'genesis-course.jpg', width: 800, height: 450, bgColor: '#e6ffe6', textColor: '#006600', text: 'Genesis Course' },
+            { name: 'article-preview.jpg', width: 800, height: 450, bgColor: '#fff9e6', textColor: '#996600', text: 'Article Preview' },
+            { name: 'community-preview.jpg', width: 800, height: 450, bgColor: '#ffe6e6', textColor: '#cc0000', text: 'Community Preview' },
+            { name: 'newsletter-illustration.png', width: 400, height: 400, bgColor: '#f2f2f2', textColor: '#333333', text: 'Newsletter\nIllustration' }
+        ];
+
+        function createCanvas(placeholder) {
+            const canvas = document.createElement('canvas');
+            canvas.width = placeholder.width;
+            canvas.height = placeholder.height;
+            canvas.id = placeholder.name.replace('.', '_');
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = placeholder.bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Text
+            ctx.fillStyle = placeholder.textColor;
+            ctx.font = `${Math.floor(canvas.height / 10)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Handle multi-line text
+            const lines = placeholder.text.split('\n');
+            const lineHeight = Math.floor(canvas.height / 8);
+            const startY = canvas.height / 2 - (lines.length - 1) * lineHeight / 2;
+            
+            lines.forEach((line, index) => {
+                ctx.fillText(line, canvas.width / 2, startY + index * lineHeight);
+            });
+            
+            // Add a download link
+            const link = document.createElement('a');
+            link.download = placeholder.name;
+            link.href = canvas.toDataURL(placeholder.name.endsWith('.png') ? 'image/png' : 'image/jpeg');
+            link.textContent = `Download ${placeholder.name}`;
+            link.style.display = 'block';
+            link.style.margin = '5px';
+            
+            const container = document.createElement('div');
+            container.style.display = 'inline-block';
+            container.style.textAlign = 'center';
+            container.appendChild(canvas);
+            container.appendChild(link);
+            
+            document.getElementById('canvasContainer').appendChild(container);
+            
+            return { canvas, link };
+        }
+
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            document.getElementById('canvasContainer').innerHTML = '';
+            const elements = placeholders.map(createCanvas);
+            
+            // Auto-download all
+            elements.forEach(({ link }) => {
+                setTimeout(() => link.click(), 100);
+            });
+        });
+    </script>
+</body>
+</html>

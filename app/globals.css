@@ -3,34 +3,156 @@
 @tailwind utilities;
 
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --background: 36, 33%, 97%;  /* Anthropic's warm beige background */
+  --foreground: 0, 0%, 12%;    /* Near-black text but slightly softer */
+  --card: 0, 0%, 100%;         /* Pure white card background */
+  --card-foreground: 0, 0%, 12%;
+  --popover: 0, 0%, 100%;      /* Pure white popover */
+  --popover-foreground: 0, 0%, 12%;
+  --primary: 0, 0%, 12%;       /* Primary text - near black but softer */
+  --primary-foreground: 0, 0%, 100%;
+  --secondary: 32, 30%, 96%;   /* Light beige for secondary elements - more subtle */
+  --secondary-foreground: 0, 0%, 12%;
+  --muted: 0, 0%, 45%;         /* Muted text */
+  --muted-foreground: 0, 0%, 45%;
+  --accent: 12, 56%, 75%;      /* Subtle coral/salmon accent - Anthropic style */
+  --accent-foreground: 0, 0%, 12%;
+  --destructive: 0, 84%, 60%;
+  --destructive-foreground: 0, 0%, 98%;
+  --border: 0, 0%, 92%;        /* Very subtle border */
+  --input: 0, 0%, 92%;
+  --ring: 36, 10%, 90%;
+  --radius: 0.5rem;           /* Slightly more rounded corners like Anthropic */
 }
 
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  @apply bg-black;
+  @apply bg-background text-foreground;
 }
 
 @layer base {
   h1, h2, h3, h4, h5, h6 {
-    font-weight: 600;
-    line-height: 1.2;
+    font-weight: 600;          /* Slightly heavier headers like Anthropic */
+    line-height: 1.2;          /* Tighter line height for headings */
+    letter-spacing: -0.02em;   /* Subtle tracking adjustment */
+  }
+
+  h1 {
+    font-size: 2.25rem;        /* Slightly smaller than before but cleaner */
+    @apply tracking-tight;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    @apply tracking-tight;
+  }
+
+  p {
+    line-height: 1.6;         /* Improved readability for paragraph text */
+    @apply text-foreground leading-relaxed;
+    margin-bottom: 1em;       /* Consistent spacing */
+  }
+
+  a {
+    @apply underline-offset-4 hover:underline hover:underline-offset-4 transition-all;
+    text-decoration: none;
   }
 
   input[type="search"] {
-    @apply bg-white;
+    @apply bg-background border-border;
   }
 
   button {
     @apply font-medium transition-all;
   }
+  
+  /* Improved mobile styles with Anthropic-inspired spacing */
+  @media (max-width: 640px) {
+    h1 {
+      font-size: 1.75rem;
+      line-height: 1.2;
+    }
+    
+    h2 {
+      font-size: 1.375rem;
+      line-height: 1.2;
+    }
+    
+    p {
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+  }
 }
 
 @layer components {
-  /* Glass morphism effects for dark theme */
-  .glass-effect-dark {
-    @apply bg-black/80 backdrop-blur-xl;
+  /* Anthropic-style button */
+  .anthropic-button {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition-colors;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+  }
+  
+  .anthropic-button:hover {
+    background-color: hsl(var(--secondary));
+  }
+  
+  /* Anthropic-style filled button */
+  .anthropic-button-filled {
+    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium shadow-sm transition-colors;
+    background-color: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+  
+  .anthropic-button-filled:hover {
+    opacity: 0.9;
+  }
+  
+  /* Anthropic-style card */
+  .anthropic-card {
+    @apply bg-card rounded-lg p-5 sm:p-6 transition-all duration-200;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  
+  .anthropic-card:hover {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  }
+  
+  /* Anthropic-style feature card */
+  .anthropic-feature-card {
+    @apply bg-card rounded-lg p-5 sm:p-6 transition-all duration-200;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Mobile optimizations with better spacing */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Mobile-optimized text */
+  .mobile-optimized-text {
+    @apply text-sm sm:text-base;
+  }
+  
+  /* Spacing utilities that match Anthropic's style */
+  .anthropic-spacing-y {
+    @apply space-y-5 sm:space-y-6 md:space-y-8;
+  }
+  
+  .anthropic-spacing-x {
+    @apply space-x-3 sm:space-x-4 md:space-x-5;
+  }
+  
+  /* Section padding that matches Anthropic's cleaner style */
+  .anthropic-section-padding {
+    @apply py-8 sm:py-12 md:py-16;
   }
 }

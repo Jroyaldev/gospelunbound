@@ -43,12 +43,12 @@ const values = [
     description: 'Rigorous scholarship meets accessible learning for meaningful growth.'
   },
   {
-    icon: Users,
+    icon: MessageCircle,
     title: 'Authentic Dialogue',
     description: 'Creating space for honest conversations about faith and doubt.'
   },
   {
-    icon: MessageCircle,
+    icon: Users,
     title: 'Open Discussion',
     description: 'Encouraging questions and diverse perspectives in theological exploration.'
   },
@@ -66,132 +66,100 @@ const values = [
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
-      {/* Subtle gradient overlay */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-zinc-800/5 via-black to-black pointer-events-none" />
-      
+    <div className="min-h-screen bg-background">
       {/* Content */}
-      <div className="relative">
-        <div className="relative px-6 lg:px-8 py-32 mx-auto max-w-6xl">
-          {/* Hero Section */}
-          <div className="flex flex-col items-start mb-32">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative mb-8 w-full"
-            >
-              <div className="absolute inset-0 bg-[#111]/80 backdrop-blur-2xl rounded-2xl" />
-              <div className="relative px-8 py-12">
-                <h1 className="text-3xl md:text-4xl font-light tracking-tight text-white/90 mb-6">
-                  About <span className="font-medium">Gospel Unbound</span>
-                </h1>
-                <p className="text-base md:text-lg text-white/60 max-w-2xl font-light leading-relaxed">
-                  Empowering spiritual growth through progressive theology, inclusive community, and transformative education.
-                </p>
-              </div>
-              <div className="absolute inset-0 border border-white/[0.05] rounded-2xl pointer-events-none" />
-            </motion.div>
+      <div className="w-full px-4 md:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
+        <div className="max-w-[90rem] mx-auto">
+          {/* Header Section */}
+          <div className="relative rounded-xl overflow-hidden mb-10 mx-4 sm:mx-6 lg:mx-8">
+            <div className="absolute inset-0 bg-[#F5F0E8] opacity-70"></div>
+            <div className="relative z-10 px-6 py-10 md:px-8 md:py-12">
+              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground mb-2">
+                About <span className="font-medium">Gospel Unbound</span>
+              </h1>
+              <p className="text-base sm:text-lg text-muted-foreground max-w-2xl">
+                Empowering spiritual growth through progressive theology, inclusive community, and transformative education.
+              </p>
+            </div>
           </div>
 
-          {/* Mission Section */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mb-32"
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-[#111]/80 backdrop-blur-2xl rounded-2xl" />
-                <div className="relative p-8">
-                  <h2 className="text-xl font-light text-white/90 mb-6 tracking-wide uppercase">Our Mission</h2>
-                  <p className="text-white/60 font-light leading-relaxed mb-6">
-                    Gospel Unbound exists to create an inclusive space where faith meets contemporary understanding. 
-                    We believe in fostering a community where questions are welcomed, doubt is honored, and spiritual 
-                    growth is nurtured through academic excellence and authentic dialogue.
-                  </p>
-                </div>
-                <div className="absolute inset-0 border border-white/[0.05] rounded-2xl pointer-events-none" />
+          <div className="px-4 sm:px-6 lg:px-8">
+            {/* Mission & Vision Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+              <div className="bg-white border border-border rounded-2xl p-6 sm:p-8 hover:shadow-md transition-all duration-300">
+                <h2 className="text-xl font-medium text-foreground mb-4">OUR MISSION</h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  Gospel Unbound exists to create an inclusive space where faith meets contemporary understanding. We believe in fostering a community where questions are welcomed, doubt is honored, and spiritual growth is nurtured through academic excellence and authentic dialogue.
+                </p>
               </div>
-              <div className="relative">
-                <div className="absolute inset-0 bg-[#111]/80 backdrop-blur-2xl rounded-2xl" />
-                <div className="relative p-8">
-                  <h2 className="text-xl font-light text-white/90 mb-6 tracking-wide uppercase">Our Vision</h2>
-                  <p className="text-white/60 font-light leading-relaxed mb-6">
-                    Our platform brings together progressive theology, biblical scholarship, and spiritual formation 
-                    resources to support individuals and communities in their journey of faith exploration and 
-                    transformation.
-                  </p>
-                </div>
-                <div className="absolute inset-0 border border-white/[0.05] rounded-2xl pointer-events-none" />
+              <div className="bg-white border border-border rounded-2xl p-6 sm:p-8 hover:shadow-md transition-all duration-300">
+                <h2 className="text-xl font-medium text-foreground mb-4">OUR VISION</h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  Our platform brings together progressive theology, biblical scholarship, and spiritual formation resources to support individuals and communities in their journey of faith exploration and transformation.
+                </p>
               </div>
             </div>
-          </motion.section>
 
-          {/* Values Section */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mb-32"
-          >
-            <h2 className="text-xl font-light text-white/90 mb-12 tracking-wide uppercase">Our Values</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {values.map((value, index) => (
-                <motion.div
-                  key={value.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * index }}
-                  className="relative group"
-                >
-                  <div className="absolute inset-0 bg-[#111]/80 backdrop-blur-2xl rounded-xl" />
-                  <div className="relative p-6">
-                    <value.icon className="w-5 h-5 text-white/30 mb-4" />
-                    <h3 className="text-base font-medium text-white/80 mb-2">{value.title}</h3>
-                    <p className="text-white/50 text-sm font-light leading-relaxed">{value.description}</p>
+            {/* Values Section */}
+            <section className="mb-16">
+              <h2 className="text-2xl font-medium text-foreground mb-8 text-center">OUR VALUES</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                {values.map((value, index) => (
+                  <div 
+                    key={index}
+                    className="bg-white border border-border rounded-2xl p-6 sm:p-8 flex flex-col hover:shadow-md hover:translate-y-[-2px] transition-all duration-300"
+                  >
+                    <div className="mb-4">
+                      <value.icon className="w-6 h-6 text-[#D7A392]" strokeWidth={1.5} />
+                    </div>
+                    <h3 className="text-lg font-medium text-foreground mb-2">{value.title}</h3>
+                    <p className="text-muted-foreground text-sm">{value.description}</p>
                   </div>
-                  <div className="absolute inset-0 border border-white/[0.05] rounded-xl group-hover:border-white/[0.1] transition-colors duration-300 pointer-events-none" />
-                </motion.div>
-              ))}
-            </div>
-          </motion.section>
+                ))}
+              </div>
+            </section>
 
-          {/* Team Section */}
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <h2 className="text-xl font-light text-white/90 mb-12 tracking-wide uppercase">Our Team</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {teamMembers.map((member, index) => (
-                <motion.div
-                  key={member.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * index }}
-                  className="relative group"
-                >
-                  <div className="absolute inset-0 bg-[#111]/80 backdrop-blur-2xl rounded-xl" />
-                  <div className="relative p-6">
-                    <div className="relative w-16 h-16 mx-auto mb-4 rounded-lg overflow-hidden">
-                      <Image
+            {/* Team Section */}
+            <section className="mb-16">
+              <h2 className="text-2xl font-medium text-foreground mb-8 text-center">OUR TEAM</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {teamMembers.map((member, index) => (
+                  <div 
+                    key={index}
+                    className="bg-white border border-border rounded-2xl overflow-hidden flex flex-col sm:flex-row hover:shadow-md hover:translate-y-[-2px] transition-all duration-300"
+                  >
+                    <div className="w-full sm:w-1/3 h-40 sm:h-auto relative">
+                      <Image 
                         src={member.image}
                         alt={member.name}
                         fill
-                        className="object-cover filter grayscale hover:grayscale-0 transition-all duration-300"
+                        className="object-cover"
                       />
                     </div>
-                    <h3 className="text-sm font-medium text-white/80 text-center mb-1">{member.name}</h3>
-                    <p className="text-white/40 text-xs text-center mb-3 font-light tracking-wide uppercase">{member.role}</p>
-                    <p className="text-white/50 text-xs text-center font-light leading-relaxed">{member.description}</p>
+                    <div className="p-5 sm:p-6 flex-1">
+                      <h3 className="text-lg font-medium text-foreground mb-1">{member.name}</h3>
+                      <p className="text-sm text-[#D7A392] mb-3">{member.role}</p>
+                      <p className="text-sm text-muted-foreground">{member.description}</p>
+                    </div>
                   </div>
-                  <div className="absolute inset-0 border border-white/[0.05] rounded-xl group-hover:border-white/[0.1] transition-colors duration-300 pointer-events-none" />
-                </motion.div>
-              ))}
-            </div>
-          </motion.section>
+                ))}
+              </div>
+            </section>
+
+            {/* Contact Section */}
+            <section className="text-center">
+              <h2 className="text-2xl font-medium text-foreground mb-4">Get in Touch</h2>
+              <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
+                Have questions or want to learn more about Gospel Unbound? We'd love to hear from you.
+              </p>
+              <a 
+                href="/contact" 
+                className="inline-flex items-center justify-center px-6 py-3 min-h-[44px] bg-[#D7A392] text-white rounded-full hover:bg-[#D7A392]/90 transition-all duration-300"
+              >
+                Contact Us
+              </a>
+            </section>
+          </div>
         </div>
       </div>
     </div>

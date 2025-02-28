@@ -1,8 +1,10 @@
+import { StaticImageData } from 'next/image';
+
 export type UserProfile = {
   id: string;
   name: string;
   image: string;
-  role: 'member' | 'moderator' | 'admin';
+  role: 'admin' | 'moderator' | 'member';
   joinDate: string;
   bio?: string;
   location?: string;
@@ -10,17 +12,24 @@ export type UserProfile = {
   badges?: string[];
 };
 
+export type Author = {
+  id: string;
+  name: string;
+  image: string;
+  role: 'admin' | 'moderator' | 'member';
+  joinDate: string;
+};
+
 export type Discussion = {
   id: string;
   title: string;
   content: string;
-  author: UserProfile;
+  author: Author;
   createdAt: string;
   category: string;
   tags: string[];
   likes: number;
   replies: number;
-  isLiked?: boolean;
   isPinned?: boolean;
 };
 

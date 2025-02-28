@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, X, ChevronDown, BookOpen, Clock, Star } from 'lucide-react';
+import { Search, Filter, X, ChevronDown, BookOpen, Clock, Star, ChevronRight, Check, RotateCcw } from 'lucide-react';
 
 // Define types for our course data
 interface Course {
@@ -19,6 +19,196 @@ interface Course {
   tag?: string;
   level?: 'beginner' | 'intermediate' | 'advanced';
 }
+
+// Course card component with consistent styling for featured items
+const CourseCard = ({ course, featured = false, className = "" }: { course: Course, featured?: boolean, className?: string }) => {
+  return (
+    <div className={`group relative flex flex-col rounded-2xl border border-border bg-white hover:border-[#D7A392]/40 hover:shadow-md transition-all duration-300 hover:translate-y-[-2px] ${className}`}>
+      <div className="relative aspect-video overflow-hidden rounded-t-2xl">
+        <Image 
+          src={course.image} 
+          alt={course.title}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          priority={featured}
+          className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-foreground/10 to-transparent"></div>
+        
+        {featured && (
+          <div className="absolute top-3 left-3 bg-[#D7A392] text-white text-xs px-3 py-1 rounded-full">
+            Featured
+          </div>
+        )}
+        
+        {course.tag && !featured && (
+          <div className="absolute top-3 left-3 bg-[#F5F0E8] text-foreground/70 text-xs px-3 py-1 rounded-full shadow-sm">
+            {course.tag}
+          </div>
+        )}
+        
+        {course.level && (
+          <div className="absolute bottom-3 left-3 bg-white/90 text-foreground/70 text-xs px-3 py-1 rounded-full shadow-sm">
+            {course.level.charAt(0).toUpperCase() + course.level.slice(1)}
+          </div>
+        )}
+      </div>
+      
+      <div className="flex flex-col flex-grow p-5 sm:p-6">
+        <h3 className="text-base sm:text-lg font-medium mb-1 text-foreground group-hover:text-[#D7A392] transition-colors">
+          {course.title}
+        </h3>
+        
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+          {course.description}
+        </p>
+        
+        <div className="mt-auto">
+          {course.instructor && (
+            <div className="text-xs text-muted-foreground mb-3">
+              Instructor: <span className="text-foreground">{course.instructor}</span>
+            </div>
+          )}
+          
+          <div className="flex items-center justify-between text-xs sm:text-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-2 sm:space-y-0">
+              <div className="flex items-center text-muted-foreground">
+                <BookOpen size={14} strokeWidth={1.5} className="mr-1.5" />
+                <span>{course.lessons} lessons</span>
+              </div>
+              <div className="flex items-center text-muted-foreground">
+                <Clock size={14} strokeWidth={1.5} className="mr-1.5" />
+                <span>{course.weeks} weeks</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center text-[#D7A392]">
+              <Star size={14} strokeWidth={1.5} className="mr-1" fill="currentColor" />
+              <span className="font-medium">{course.rating}</span>
+            </div>
+          </div>
+        </div>
+        
+        <Link 
+          href={`/courses/${course.id}`} 
+          className="absolute inset-0"
+          aria-label={`View ${course.title} course details`}
+        >
+          <span className="sr-only">View {course.title}</span>
+        </Link>
+      </div>
+    </div>
+  );
+};
+
+// Course Section Component
+const CourseSection = ({ title, subtitle, courses }: { title: string, subtitle?: string, courses: Course[] }) => {
+  return (
+    <section className="mb-12">
+      <div className="mb-5">
+        <h2 className="text-xl font-medium text-foreground mb-1">{title}</h2>
+        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {courses.map((course) => (
+          <CourseCard key={course.id} course={course} />
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// Mobile filters drawer
+const MobileFilters = ({ 
+  isOpen, 
+  onClose, 
+  filterOptions, 
+  selectedFilters, 
+  onFilterChange 
+}: {
+  isOpen: boolean,
+  onClose: () => void,
+  filterOptions: Record<string, { id: string, label: string }[]>,
+  selectedFilters: Record<string, string>,
+  onFilterChange: (key: string, value: string) => void
+}) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40"
+            onClick={onClose}
+          />
+          
+          {/* Drawer */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed top-0 right-0 h-full w-[85%] max-w-md bg-background border-l border-border z-50 overflow-y-auto"
+          >
+            <div className="sticky top-0 bg-background border-b border-border z-10 flex justify-between items-center p-4">
+              <h2 className="font-medium text-lg tracking-tight">Filters</h2>
+              <button 
+                onClick={onClose}
+                className="p-2 text-foreground hover:bg-[#F5F0E8]/50 rounded-full transition-colors"
+              >
+                <X size={20} strokeWidth={1.5} />
+                <span className="sr-only">Close</span>
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-6">
+              {Object.entries(filterOptions).map(([key, options]) => (
+                <div key={key} className="space-y-3">
+                  <h3 className="font-medium capitalize text-foreground/90 tracking-tight">
+                    {key === 'category' ? 'Categories' : key === 'level' ? 'Level' : 'Duration'}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 gap-2 ml-1">
+                    {options.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => onFilterChange(key, option.id)}
+                        className={`flex items-center justify-between w-full px-3 py-2 text-left rounded-md transition-colors ${
+                          selectedFilters[key] === option.id
+                            ? 'bg-[#F5F0E8] text-foreground font-medium'
+                            : 'hover:bg-[#F5F0E8]/30 text-muted-foreground'
+                        }`}
+                      >
+                        <span>{option.label}</span>
+                        {selectedFilters[key] === option.id && (
+                          <Check size={16} strokeWidth={1.5} className="text-[#D7A392]" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="sticky bottom-0 bg-background border-t border-border p-4">
+              <button
+                onClick={onClose}
+                className="w-full py-2.5 px-4 bg-[#D7A392] text-white rounded-full transition-all hover:bg-[#D7A392]/90"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
 
 export default function CoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,7 +272,7 @@ export default function CoursesPage() {
       lessons: 48,
       weeks: 16,
       rating: 4.8,
-      image: 'https://images.unsplash.com/photo-1447023029226-ef8f6b52e3ea?w=1200&auto=format&fit=crop&q=80'
+      image: 'https://images.unsplash.com/photo-1544033527-b192daee1f5b?w=1200&auto=format&fit=crop&q=80'
     },
     {
       id: 'early-church-history',
@@ -133,6 +323,40 @@ export default function CoursesPage() {
     }
   ];
 
+  // Theology courses
+  const theologyCourses = [
+    {
+      id: 'progressive-theology',
+      title: 'Progressive Theology',
+      description: 'Exploring modern theological interpretations and their ethical implications',
+      instructor: 'Dr. Sarah Williams',
+      lessons: 28,
+      weeks: 10,
+      rating: 4.9,
+      image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=1200&auto=format&fit=crop&q=80'
+    },
+    {
+      id: 'liberation-theology',
+      title: 'Liberation Theology',
+      description: 'Understanding theological perspectives focused on social justice and freedom',
+      instructor: 'Dr. Miguel Rodriguez',
+      lessons: 24,
+      weeks: 8,
+      rating: 4.8,
+      image: 'https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?w=1200&auto=format&fit=crop&q=80'
+    },
+    {
+      id: 'feminist-theology',
+      title: 'Feminist Theology',
+      description: 'Exploring theological concepts through feminist interpretation and critique',
+      instructor: 'Dr. Elizabeth Chen',
+      lessons: 20,
+      weeks: 8,
+      rating: 4.7,
+      image: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=1200&auto=format&fit=crop&q=80'
+    }
+  ];
+
   // Apply filters to courses
   const filterCourses = (courses: Course[]): Course[] => {
     return courses.filter(course => {
@@ -178,6 +402,7 @@ export default function CoursesPage() {
 
   const filteredFeaturedCourses = filterCourses(featuredCourses);
   const filteredBiblicalStudies = filterCourses(biblicalStudies);
+  const filteredTheologyCourses = filterCourses(theologyCourses);
 
   // Reset all filters
   const resetFilters = () => {
@@ -189,445 +414,263 @@ export default function CoursesPage() {
     setSearchQuery('');
   };
 
-  // Skeleton loader for course cards
-  const CourseCardSkeleton = () => (
-    <div className="relative rounded-2xl overflow-hidden h-[400px] bg-black/40">
-      <div className="absolute inset-0 bg-white/5 backdrop-blur-xl" />
-      <div className="relative h-48 bg-white/5 animate-pulse" />
-      <div className="relative p-6 bg-black/40 h-[208px] flex flex-col">
-        <div className="h-4 w-20 bg-white/10 rounded animate-pulse mb-3" />
-        <div className="h-6 w-3/4 bg-white/10 rounded animate-pulse mb-2" />
-        <div className="h-4 w-full bg-white/10 rounded animate-pulse mb-2" />
-        <div className="h-4 w-2/3 bg-white/10 rounded animate-pulse mb-4" />
-        <div className="mt-auto flex justify-between">
-          <div className="h-4 w-24 bg-white/10 rounded animate-pulse" />
-          <div className="h-4 w-24 bg-white/10 rounded animate-pulse" />
-        </div>
-      </div>
-      <div className="absolute inset-0 rounded-2xl border border-white/[0.1]" />
-    </div>
-  );
+  const handleFilterChange = (key: keyof typeof selectedFilters, value: string) => {
+    setSelectedFilters({ ...selectedFilters, [key]: value });
+  };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/20 via-black to-black pb-20">
-      {/* Background subtle patterns */}
-      <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.015] pointer-events-none mix-blend-overlay" />
-      <div className="fixed inset-0 bg-gradient-to-b from-slate-500/5 via-transparent to-transparent pointer-events-none" />
-      
+    <main className="min-h-screen bg-background text-foreground">
       {/* Content */}
-      <div className="relative">
-        <div className="relative px-6 lg:px-8 py-24 mx-auto max-w-[90rem]">
-          <div className="flex flex-col items-center text-center mb-16">
-            <h1 className="text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80 mb-6">
-              Courses
-            </h1>
-            <p className="text-lg text-white/60 max-w-2xl">
-              Dive deep into biblical studies, theology, and spiritual formation with our expert-led courses
-            </p>
+      <div className="w-full px-4 md:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
+        <div className="max-w-[90rem] mx-auto">
+          {/* Header with decorative background */}
+          <div className="relative rounded-xl overflow-hidden mb-8 mx-4 sm:mx-6 lg:mx-8">
+            <div className="absolute inset-0 bg-[#F5F0E8] opacity-70"></div>
+            <div className="relative z-10 px-6 py-8 md:px-8 md:py-10">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-white/90 text-foreground/70 mb-4">
+                <span>Learn at your own pace</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground mb-2">
+                Explore Our Courses
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-md">
+                Thoughtfully designed courses for progressive faith journeys
+              </p>
+            </div>
           </div>
-
-          {/* Search and Filter */}
-          <div className="flex flex-col space-y-4 mb-8 md:mb-16">
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
-              <div className="flex-1 relative group">
-                <div className="absolute inset-0 bg-white/5 rounded-2xl blur-md transition-all duration-300 group-hover:bg-white/10" />
-                <div className="relative flex items-center bg-black/20 rounded-2xl">
+          
+          {/* Search and Filters */}
+          <div className="px-5 sm:px-8 lg:px-10">
+            <div className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0 mb-8">
+              {/* Search */}
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="relative flex-1 md:min-w-[280px]">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Search size={16} strokeWidth={1.5} className="text-muted-foreground" />
+                  </div>
                   <input
                     type="text"
                     placeholder="Search courses..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl pl-6 pr-12 py-4 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-slate-500/30 focus:border-slate-500/30 transition-all duration-300"
+                    className="block w-full py-2.5 pl-10 pr-3 border border-border rounded-full bg-white text-foreground placeholder-muted-foreground focus:border-[#E8D5C8] focus:ring-[#E8D5C8] transition-all duration-200 min-h-[44px]"
                   />
-                  {searchQuery && (
-                    <button 
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-12 p-2 text-white/40 hover:text-white/70 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                  <div className="absolute right-4 p-2 rounded-xl bg-white/5 backdrop-blur-sm">
-                    <Search className="w-4 h-4 text-white/60" />
-                  </div>
                 </div>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-0 bg-white/5 rounded-2xl blur-md transition-all duration-300 group-hover:bg-white/10" />
-                <button 
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="relative w-full md:w-auto flex items-center justify-between gap-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl px-6 py-4 text-white hover:bg-white/[0.12] transition-all duration-300"
+                
+                <button
+                  onClick={() => setShowFilters(true)}
+                  className="flex items-center justify-center min-h-[44px] px-4 py-2 bg-white border border-border rounded-full text-foreground hover:bg-[#F5F0E8]/30 transition-all duration-200"
                 >
-                  <div className="flex items-center gap-3">
-                    <Filter className="w-4 h-4" />
-                    <span className="text-sm font-medium">Filter</span>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showFilters ? 'rotate-180' : ''}`} />
+                  <Filter size={16} strokeWidth={1.5} className="mr-2" />
+                  <span className="text-sm">Filters</span>
                 </button>
               </div>
             </div>
-            
-            {/* Filter panel */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="overflow-hidden"
-                >
-                  <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Level filter */}
-                      <div>
-                        <h3 className="text-white/80 font-medium mb-3">Level</h3>
-                        <div className="space-y-2">
-                          {filterOptions.level.map(option => (
-                            <button
-                              key={option.id}
-                              onClick={() => setSelectedFilters({...selectedFilters, level: option.id})}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                selectedFilters.level === option.id
-                                  ? 'bg-white/20 text-white'
-                                  : 'text-white/60 hover:bg-white/10 hover:text-white/80'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Duration filter */}
-                      <div>
-                        <h3 className="text-white/80 font-medium mb-3">Duration</h3>
-                        <div className="space-y-2">
-                          {filterOptions.duration.map(option => (
-                            <button
-                              key={option.id}
-                              onClick={() => setSelectedFilters({...selectedFilters, duration: option.id})}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                selectedFilters.duration === option.id
-                                  ? 'bg-white/20 text-white'
-                                  : 'text-white/60 hover:bg-white/10 hover:text-white/80'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* Category filter */}
-                      <div>
-                        <h3 className="text-white/80 font-medium mb-3">Category</h3>
-                        <div className="space-y-2">
-                          {filterOptions.category.map(option => (
-                            <button
-                              key={option.id}
-                              onClick={() => setSelectedFilters({...selectedFilters, category: option.id})}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                selectedFilters.category === option.id
-                                  ? 'bg-white/20 text-white'
-                                  : 'text-white/60 hover:bg-white/10 hover:text-white/80'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Reset filters button */}
-                    <div className="mt-6 flex justify-end">
-                      <button
-                        onClick={resetFilters}
-                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg text-sm transition-colors"
-                      >
-                        Reset Filters
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            
-            {/* Active filters display */}
-            {(selectedFilters.level !== 'all' || selectedFilters.duration !== 'all' || selectedFilters.category !== 'all' || searchQuery) && (
-              <div className="flex flex-wrap items-center gap-2 pt-2">
-                <span className="text-white/50 text-sm">Active filters:</span>
-                
-                {searchQuery && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                    <span className="text-white/80 text-xs">Search: {searchQuery}</span>
-                    <button onClick={() => setSearchQuery('')} className="text-white/50 hover:text-white/80">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                
-                {selectedFilters.level !== 'all' && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                    <span className="text-white/80 text-xs">
-                      Level: {filterOptions.level.find(o => o.id === selectedFilters.level)?.label}
-                    </span>
-                    <button 
-                      onClick={() => setSelectedFilters({...selectedFilters, level: 'all'})}
-                      className="text-white/50 hover:text-white/80"
+          </div>
+          
+          {/* Active filters */}
+          {Object.entries(selectedFilters).some(([_, value]) => value !== 'all') && (
+            <div className="px-5 sm:px-8 lg:px-10 mb-8">
+              <div className="flex flex-wrap items-center gap-2">
+                {Object.entries(selectedFilters).map(([key, value]) => {
+                  if (value === 'all') return null;
+                  
+                  const option = filterOptions[key as keyof typeof filterOptions].find(opt => opt.id === value);
+                  if (!option) return null;
+                  
+                  return (
+                    <button
+                      key={`${key}-${value}`}
+                      onClick={() => handleFilterChange(key as keyof typeof selectedFilters, 'all')}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#F5F0E8] text-foreground/70 text-xs hover:bg-[#E8D5C8]/50 transition-all duration-200"
                     >
-                      <X className="w-3 h-3" />
+                      {option.label}
+                      <X size={14} strokeWidth={1.5} />
                     </button>
-                  </div>
-                )}
-                
-                {selectedFilters.duration !== 'all' && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                    <span className="text-white/80 text-xs">
-                      Duration: {filterOptions.duration.find(o => o.id === selectedFilters.duration)?.label}
-                    </span>
-                    <button 
-                      onClick={() => setSelectedFilters({...selectedFilters, duration: 'all'})}
-                      className="text-white/50 hover:text-white/80"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                
-                {selectedFilters.category !== 'all' && (
-                  <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1.5">
-                    <span className="text-white/80 text-xs">
-                      Category: {filterOptions.category.find(o => o.id === selectedFilters.category)?.label}
-                    </span>
-                    <button 
-                      onClick={() => setSelectedFilters({...selectedFilters, category: 'all'})}
-                      className="text-white/50 hover:text-white/80"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                
-                <button 
+                  );
+                })}
+                <button
                   onClick={resetFilters}
-                  className="text-white/50 hover:text-white/80 text-xs underline"
+                  className="text-xs text-[#D7A392] hover:underline underline-offset-4 flex items-center gap-1"
                 >
-                  Clear all
+                  <RotateCcw size={12} strokeWidth={1.5} />
+                  Reset all
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Mobile Filters */}
+          <MobileFilters
+            isOpen={showFilters}
+            onClose={() => setShowFilters(false)}
+            filterOptions={filterOptions}
+            selectedFilters={selectedFilters}
+            onFilterChange={handleFilterChange}
+          />
 
           {/* Featured Courses */}
-          <section className="mb-24">
-            <div className="flex items-center justify-between mb-10">
-              <h2 className="text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80">Featured Courses</h2>
-              <Link href="/courses/featured" className="text-slate-400 hover:text-slate-300 transition-colors">
-                View all
-              </Link>
+          <div className="px-5 sm:px-8 lg:px-10">
+            <div className="mb-5">
+              <h2 className="text-xl font-medium tracking-tight text-foreground mb-1">Featured Courses</h2>
             </div>
             
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[1, 2, 3].map(i => (
-                  <CourseCardSkeleton key={i} />
-                ))}
-              </div>
-            ) : filteredFeaturedCourses.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredFeaturedCourses.map((course) => (
-                  <motion.div
-                    key={course.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="group"
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {isLoading ? (
+                Array(3).fill(0).map((_, index) => (
+                  <div key={index} className="rounded-2xl bg-white border border-border animate-pulse">
+                    <div className="aspect-video bg-[#F5F0E8] rounded-t-2xl"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-5 bg-[#F5F0E8] rounded-full w-2/3"></div>
+                      <div className="h-4 bg-[#F5F0E8] rounded-full w-full"></div>
+                      <div className="h-4 bg-[#F5F0E8] rounded-full w-3/4"></div>
+                      <div className="h-4 bg-[#F5F0E8] rounded-full w-1/2"></div>
+                    </div>
+                  </div>
+                ))
+              ) : filteredFeaturedCourses.length > 0 ? (
+                filteredFeaturedCourses.map((course) => (
+                  <CourseCard key={course.id} course={course} featured={true} />
+                ))
+              ) : (
+                <div className="col-span-1 md:col-span-3 py-10 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F5F0E8] mb-4">
+                    <Search size={20} strokeWidth={1.5} className="text-[#D7A392]" />
+                  </div>
+                  <p className="text-foreground font-medium mb-2">No courses found matching your filters</p>
+                  <p className="text-muted-foreground text-sm mb-4">Try adjusting your search or filters to find what you're looking for</p>
+                  <button
+                    onClick={resetFilters}
+                    className="text-[#D7A392] hover:underline underline-offset-4 text-sm flex items-center mx-auto gap-1"
                   >
-                    {/* Card container with hover animation */}
-                    <motion.div
-                      whileHover={{ scale: 1.02, y: -5 }}
-                      transition={{ duration: 0.3 }}
-                      className="relative rounded-2xl overflow-hidden h-[400px] bg-black/40 will-change-transform"
-                    >
-                      {/* Blur effect container */}
-                      <div className="absolute inset-0 bg-white/5 backdrop-blur-xl" />
-                      
-                      {/* Content wrapper */}
-                      <Link href={`/courses/${course.id}`} className="relative block h-full">
-                        {/* Image container - static, no transform */}
-                        <div className="relative h-48">
-                          <div className="absolute inset-0 bg-black/20" />
-                          <Image
-                            src={course.image}
-                            alt={course.title}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-                        </div>
-                        
-                        {/* Content section */}
-                        <div className="relative p-6 bg-black/40 h-[208px] flex flex-col">
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="flex items-center gap-1 text-yellow-400">
-                              <Star className="w-4 h-4 fill-current" />
-                              <span className="text-white/70">{course.rating}</span>
-                            </div>
-                          </div>
-                          <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-slate-300 transition-colors line-clamp-1">{course.title}</h3>
-                          <p className="text-white/70 text-sm mb-4 line-clamp-2 flex-grow">{course.description}</p>
-                          <div className="flex items-center justify-between text-sm text-white/50">
-                            <div className="flex items-center gap-1.5">
-                              <BookOpen className="w-3.5 h-3.5" />
-                              <span>{course.lessons} lessons</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>{course.weeks} weeks</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Hover overlay with "View Course" button */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="px-4 py-2 bg-white/20 backdrop-blur-md rounded-lg text-white text-sm font-medium transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                            View Course
-                          </div>
-                        </div>
-                      </Link>
-                      
-                      {/* Border overlay */}
-                      <div className="absolute inset-0 rounded-2xl border border-white/[0.1] group-hover:border-white/[0.2] transition-colors duration-300 pointer-events-none" />
-                    </motion.div>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
-                <div className="text-white/40 mb-4">
-                  <BookOpen className="w-12 h-12" />
+                    <RotateCcw size={14} strokeWidth={1.5} />
+                    Reset filters
+                  </button>
                 </div>
-                <h3 className="text-xl font-medium text-white/80 mb-2">No courses found</h3>
-                <p className="text-white/60 text-center max-w-md mb-6">We couldn't find any courses matching your current filters.</p>
-                <button
-                  onClick={resetFilters}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-                >
-                  Reset Filters
-                </button>
-              </div>
-            )}
-          </section>
+              )}
+            </div>
+          </div>
 
           {/* Biblical Studies */}
-          <section>
-            <div className="flex items-center justify-between mb-10">
-              <h2 className="text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/80">Biblical Studies</h2>
-              <Link href="/courses/biblical-studies" className="text-slate-400 hover:text-slate-300 transition-colors">
+          <div className="space-y-12 sm:space-y-16 mt-8 px-5 sm:px-8 lg:px-10">
+            <div className="mb-5 flex justify-between items-end">
+              <div>
+                <h2 className="text-xl font-medium tracking-tight text-foreground mb-1">Biblical Studies</h2>
+                <p className="text-sm text-muted-foreground">Explore the foundations of faith</p>
+              </div>
+              <Link 
+                href="/courses/biblical-studies"
+                className="text-sm text-[#D7A392] flex items-center gap-1 hover:underline underline-offset-4"
+              >
                 View all
+                <ChevronRight size={14} strokeWidth={1.5} />
               </Link>
             </div>
             
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[1, 2, 3].map(i => (
-                  <CourseCardSkeleton key={i} />
-                ))}
-              </div>
-            ) : filteredBiblicalStudies.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredBiblicalStudies.map((course) => (
-                  <motion.div
-                    key={course.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="group"
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {isLoading ? (
+                Array(3).fill(0).map((_, index) => (
+                  <div key={index} className="rounded-2xl bg-white border border-border animate-pulse">
+                    <div className="aspect-video bg-[#F5F0E8] rounded-t-2xl"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-5 bg-[#F5F0E8] rounded-full w-2/3"></div>
+                      <div className="h-4 bg-[#F5F0E8] rounded-full w-full"></div>
+                      <div className="h-4 bg-[#F5F0E8] rounded-full w-3/4"></div>
+                      <div className="h-4 bg-[#F5F0E8] rounded-full w-1/2"></div>
+                    </div>
+                  </div>
+                ))
+              ) : filteredBiblicalStudies.length > 0 ? (
+                filteredBiblicalStudies.map((course) => (
+                  <CourseCard key={course.id} course={course} />
+                ))
+              ) : (
+                <div className="col-span-1 md:col-span-3 py-10 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F5F0E8] mb-4">
+                    <Search size={20} strokeWidth={1.5} className="text-[#D7A392]" />
+                  </div>
+                  <p className="text-foreground font-medium mb-2">No biblical studies courses found matching your filters</p>
+                  <p className="text-muted-foreground text-sm mb-4">Try adjusting your search or filters to find what you're looking for</p>
+                  <button
+                    onClick={resetFilters}
+                    className="text-[#D7A392] hover:underline underline-offset-4 text-sm flex items-center mx-auto gap-1"
                   >
-                    {/* Card container with hover animation */}
-                    <motion.div
-                      whileHover={{ scale: 1.02, y: -5 }}
-                      transition={{ duration: 0.3 }}
-                      className="relative rounded-2xl overflow-hidden h-[400px] bg-black/40 will-change-transform"
-                    >
-                      {/* Blur effect container */}
-                      <div className="absolute inset-0 bg-white/5 backdrop-blur-xl" />
-                      
-                      {/* Content wrapper */}
-                      <Link href={`/courses/${course.id}`} className="relative block h-full">
-                        {/* Image container - static, no transform */}
-                        <div className="relative h-48">
-                          <div className="absolute inset-0 bg-black/20" />
-                          <Image
-                            src={course.image}
-                            alt={course.title}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-                          {course.tag && (
-                            <div className="absolute top-4 left-4 z-10">
-                              <span className="px-3 py-1.5 text-xs rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/20 font-medium">
-                                {course.tag}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Content section */}
-                        <div className="relative p-6 bg-black/40 h-[208px] flex flex-col">
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="flex items-center gap-1 text-yellow-400">
-                              <Star className="w-4 h-4 fill-current" />
-                              <span className="text-white/70">{course.rating}</span>
-                            </div>
-                          </div>
-                          <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-slate-300 transition-colors line-clamp-1">{course.title}</h3>
-                          <p className="text-white/70 text-sm mb-4 line-clamp-2 flex-grow">{course.description}</p>
-                          <div className="flex items-center justify-between text-sm text-white/50">
-                            <div className="flex items-center gap-1.5">
-                              <BookOpen className="w-3.5 h-3.5" />
-                              <span>{course.lessons} lessons</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>{course.weeks} weeks</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Hover overlay with "View Course" button */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="px-4 py-2 bg-white/20 backdrop-blur-md rounded-lg text-white text-sm font-medium transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                            View Course
-                          </div>
-                        </div>
-                      </Link>
-                      
-                      {/* Border overlay */}
-                      <div className="absolute inset-0 rounded-2xl border border-white/[0.1] group-hover:border-white/[0.2] transition-colors duration-300 pointer-events-none" />
-                    </motion.div>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
-                <div className="text-white/40 mb-4">
-                  <BookOpen className="w-12 h-12" />
+                    <RotateCcw size={14} strokeWidth={1.5} />
+                    Reset filters
+                  </button>
                 </div>
-                <h3 className="text-xl font-medium text-white/80 mb-2">No courses found</h3>
-                <p className="text-white/60 text-center max-w-md mb-6">We couldn't find any courses matching your current filters.</p>
-                <button
-                  onClick={resetFilters}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-                >
-                  Reset Filters
-                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Theology Studies */}
+          <div className="space-y-12 sm:space-y-16 mt-8 px-5 sm:px-8 lg:px-10">
+            <div className="mb-5 flex justify-between items-end">
+              <div>
+                <h2 className="text-xl font-medium tracking-tight text-foreground mb-1">Theology</h2>
+                <p className="text-sm text-muted-foreground">Examine theological concepts with contemporary perspectives</p>
               </div>
-            )}
-          </section>
+              <Link 
+                href="/courses/theology"
+                className="text-sm text-[#D7A392] flex items-center gap-1 hover:underline underline-offset-4"
+              >
+                View all
+                <ChevronRight size={14} strokeWidth={1.5} />
+              </Link>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {isLoading ? (
+                Array(3).fill(0).map((_, index) => (
+                  <div key={index} className="rounded-2xl bg-white border border-border animate-pulse">
+                    <div className="aspect-video bg-[#F5F0E8] rounded-t-2xl"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-5 bg-[#F5F0E8] rounded-full w-2/3"></div>
+                      <div className="h-4 bg-[#F5F0E8] rounded-full w-full"></div>
+                      <div className="h-4 bg-[#F5F0E8] rounded-full w-3/4"></div>
+                      <div className="h-4 bg-[#F5F0E8] rounded-full w-1/2"></div>
+                    </div>
+                  </div>
+                ))
+              ) : filteredTheologyCourses.length > 0 ? (
+                filteredTheologyCourses.map((course) => (
+                  <CourseCard key={course.id} course={course} />
+                ))
+              ) : (
+                <div className="col-span-1 md:col-span-3 py-10 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F5F0E8] mb-4">
+                    <Search size={20} strokeWidth={1.5} className="text-[#D7A392]" />
+                  </div>
+                  <p className="text-foreground font-medium mb-2">No theology courses found matching your filters</p>
+                  <p className="text-muted-foreground text-sm mb-4">Try adjusting your search or filters to find what you're looking for</p>
+                  <button
+                    onClick={resetFilters}
+                    className="text-[#D7A392] hover:underline underline-offset-4 text-sm flex items-center mx-auto gap-1"
+                  >
+                    <RotateCcw size={14} strokeWidth={1.5} />
+                    Reset filters
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Pagination */}
+          <div className="flex justify-center items-center space-x-2 mt-10 mb-6">
+            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">
+              <span className="sr-only">Previous page</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+            <button className="inline-flex items-center justify-center rounded-full w-10 h-10 text-sm bg-[#E8D5C8] text-foreground">1</button>
+            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">2</button>
+            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">3</button>
+            <span className="text-muted-foreground mx-1">...</span>
+            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">6</button>
+            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">
+              <span className="sr-only">Next page</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
+          </div>
         </div>
       </div>
     </main>

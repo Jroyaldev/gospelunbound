@@ -35,14 +35,14 @@ export default function LoadingState() {
   if (!isLoading) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-opacity duration-300">
-      <div className="flex flex-col items-center bg-black/40 p-8 rounded-2xl border border-white/10 shadow-2xl shadow-black/30">
-        <div className="relative h-14 w-14">
-          <div className="absolute inset-0 rounded-full border-4 border-white/15"></div>
-          <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 animate-spin"></div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/25 backdrop-blur-sm transition-opacity duration-300">
+      <div className="flex flex-col items-center bg-background p-6 rounded-lg border border-border shadow-sm">
+        <div className="relative h-12 w-12">
+          <div className="absolute inset-0 rounded-full border-2 border-muted"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-t-accent animate-spin"></div>
         </div>
-        <p className="mt-5 text-base font-medium text-white/90">Loading...</p>
+        <p className="mt-4 text-sm font-medium text-foreground">Loading...</p>
       </div>
     </div>
   );
-} 
+}
