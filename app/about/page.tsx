@@ -1,8 +1,16 @@
 'use client';
 
+import React, { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { Heart, Users, BookOpen, MessageCircle, Globe, Sparkles } from 'lucide-react';
+
+// Define proper typing for the values array
+interface ValueItem {
+  icon: ReactNode;
+  title: string;
+  description: string;
+}
 
 const teamMembers = [
   {
@@ -31,34 +39,35 @@ const teamMembers = [
   }
 ];
 
-const values = [
+// Generate values with pre-rendered icons to avoid TypeScript errors
+const values: ValueItem[] = [
   {
-    icon: Heart,
+    icon: React.createElement(Heart, { className: "w-6 h-6 text-[#D7A392]", strokeWidth: 1.5 }),
     title: 'Inclusive Community',
     description: 'We welcome all seekers, embracing diversity in thought and experience.'
   },
   {
-    icon: BookOpen,
+    icon: React.createElement(BookOpen, { className: "w-6 h-6 text-[#D7A392]", strokeWidth: 1.5 }),
     title: 'Academic Excellence',
     description: 'Rigorous scholarship meets accessible learning for meaningful growth.'
   },
   {
-    icon: MessageCircle,
+    icon: React.createElement(MessageCircle, { className: "w-6 h-6 text-[#D7A392]", strokeWidth: 1.5 }),
     title: 'Authentic Dialogue',
     description: 'Creating space for honest conversations about faith and doubt.'
   },
   {
-    icon: Users,
+    icon: React.createElement(Users, { className: "w-6 h-6 text-[#D7A392]", strokeWidth: 1.5 }),
     title: 'Open Discussion',
     description: 'Encouraging questions and diverse perspectives in theological exploration.'
   },
   {
-    icon: Globe,
+    icon: React.createElement(Globe, { className: "w-6 h-6 text-[#D7A392]", strokeWidth: 1.5 }),
     title: 'Global Perspective',
     description: 'Engaging with faith traditions and insights from around the world.'
   },
   {
-    icon: Sparkles,
+    icon: React.createElement(Sparkles, { className: "w-6 h-6 text-[#D7A392]", strokeWidth: 1.5 }),
     title: 'Progressive Vision',
     description: 'Embracing contemporary insights while honoring ancient wisdom.'
   }
@@ -110,7 +119,7 @@ export default function AboutPage() {
                     className="bg-white border border-border rounded-2xl p-6 sm:p-8 flex flex-col hover:shadow-md hover:translate-y-[-2px] transition-all duration-300"
                   >
                     <div className="mb-4">
-                      <value.icon className="w-6 h-6 text-[#D7A392]" strokeWidth={1.5} />
+                      {value.icon}
                     </div>
                     <h3 className="text-lg font-medium text-foreground mb-2">{value.title}</h3>
                     <p className="text-muted-foreground text-sm">{value.description}</p>
@@ -123,26 +132,32 @@ export default function AboutPage() {
             <section className="mb-16">
               <h2 className="text-2xl font-medium text-foreground mb-8 text-center">OUR TEAM</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {teamMembers.map((member, index) => (
-                  <div 
-                    key={index}
-                    className="bg-white border border-border rounded-2xl overflow-hidden flex flex-col sm:flex-row hover:shadow-md hover:translate-y-[-2px] transition-all duration-300"
-                  >
-                    <div className="w-full sm:w-1/3 h-40 sm:h-auto relative">
-                      <Image 
-                        src={member.image}
-                        alt={member.name}
-                        fill
-                        className="object-cover"
-                      />
+                {teamMembers.map((member, index) => {
+                  // Use createElement for the Image component to avoid TypeScript errors
+                  const memberImage = React.createElement(Image, {
+                    src: member.image,
+                    alt: member.name,
+                    fill: true,
+                    sizes: "(max-width: 640px) 100vw, 33vw",
+                    className: "object-cover"
+                  });
+                  
+                  return (
+                    <div 
+                      key={index}
+                      className="bg-white border border-border rounded-2xl overflow-hidden flex flex-col sm:flex-row hover:shadow-md hover:translate-y-[-2px] transition-all duration-300"
+                    >
+                      <div className="w-full sm:w-1/3 h-40 sm:h-auto relative">
+                        {memberImage}
+                      </div>
+                      <div className="p-5 sm:p-6 flex-1">
+                        <h3 className="text-lg font-medium text-foreground mb-1">{member.name}</h3>
+                        <p className="text-sm text-[#D7A392] mb-3">{member.role}</p>
+                        <p className="text-sm text-muted-foreground">{member.description}</p>
+                      </div>
                     </div>
-                    <div className="p-5 sm:p-6 flex-1">
-                      <h3 className="text-lg font-medium text-foreground mb-1">{member.name}</h3>
-                      <p className="text-sm text-[#D7A392] mb-3">{member.role}</p>
-                      <p className="text-sm text-muted-foreground">{member.description}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 
@@ -164,4 +179,4 @@ export default function AboutPage() {
       </div>
     </div>
   );
-}
+} 

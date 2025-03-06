@@ -470,28 +470,6 @@ export default function EditProfilePage() {
             </p>
           </div>
 
-          {/* Username - Less prominent, optional */}
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-foreground mb-1.5">
-              Username <span className="text-muted-foreground text-xs">(optional)</span>
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              className={`block w-full rounded-md border ${fieldErrors.username ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-border focus:border-primary focus:ring-primary'} bg-background px-3 py-2 text-foreground shadow-sm focus:outline-none focus:ring-1`}
-              placeholder="Your unique username (optional)"
-            />
-            {fieldErrors.username && (
-              <p className="mt-1 text-sm text-red-600">{fieldErrors.username}</p>
-            )}
-            <p className="mt-1 text-xs text-muted-foreground">
-              A unique identifier for your account. Letters, numbers, underscores and hyphens only.
-            </p>
-          </div>
-
           <div>
             <label htmlFor="bio" className="block text-sm font-medium text-foreground mb-1.5">
               Bio
@@ -546,68 +524,6 @@ export default function EditProfilePage() {
           </button>
         </div>
       </form>
-
-      {/* Debug Panel - visible only in development */}
-      {IS_DEVELOPMENT && (
-        <div className="mt-10 border-t pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <button
-              type="button"
-              onClick={() => setShowDebugPanel(!showDebugPanel)}
-              className="text-sm text-muted-foreground flex items-center"
-            >
-              <TypedBadgeAlert className="h-4 w-4 mr-1" />
-              {showDebugPanel ? 'Hide' : 'Show'} Debug Panel (Dev Only)
-            </button>
-          </div>
-          
-          {showDebugPanel && (
-            <div className="border rounded-lg p-4 bg-muted/30">
-              <h3 className="text-sm font-medium mb-3">Supabase Connection Testing</h3>
-              
-              <div className="flex space-x-3 mb-4">
-                <button
-                  type="button"
-                  onClick={testConnection}
-                  disabled={isTesting}
-                  className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-sm hover:bg-muted"
-                >
-                  <TypedDatabase className="h-4 w-4 mr-1" />
-                  Test Connection
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={testUpdate}
-                  disabled={isTesting || !user?.id}
-                  className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground shadow-sm hover:bg-muted"
-                >
-                  <TypedUser className="h-4 w-4 mr-1" />
-                  Test Profile Update
-                </button>
-              </div>
-              
-              {isTesting && (
-                <div className="flex items-center text-sm text-muted-foreground mb-2">
-                  <TypedLoader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Running test...
-                </div>
-              )}
-              
-              {testResult && (
-                <div className={`p-3 rounded-md text-sm ${testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                  <div className="font-medium mb-1">{testResult.message}</div>
-                  {testResult.data && (
-                    <pre className="text-xs mt-1 max-h-40 overflow-auto">
-                      {JSON.stringify(testResult.data, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 } 
