@@ -23,7 +23,7 @@ interface Course {
 // Course card component with consistent styling for featured items
 const CourseCard = ({ course, featured = false, className = "" }: { course: Course, featured?: boolean, className?: string }) => {
   return (
-    <div className={`group relative flex flex-col rounded-2xl border border-border bg-white hover:border-[#D7A392]/40 hover:shadow-md transition-all duration-300 hover:translate-y-[-2px] ${className}`}>
+    <div className={`group relative flex flex-col rounded-2xl border border-[#E8E6E1] bg-white hover:border-[#4A7B61]/40 hover:shadow-md transition-all duration-300 hover:translate-y-[-2px] ${className}`}>
       <div className="relative aspect-video overflow-hidden rounded-t-2xl">
         <Image 
           src={course.image} 
@@ -33,56 +33,56 @@ const CourseCard = ({ course, featured = false, className = "" }: { course: Cour
           priority={featured}
           className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 via-foreground/10 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#2C2925]/50 via-[#2C2925]/10 to-transparent"></div>
         
         {featured && (
-          <div className="absolute top-3 left-3 bg-[#D7A392] text-white text-xs px-3 py-1 rounded-full">
+          <div className="absolute top-3 left-3 bg-[#4A7B61] text-white text-xs px-3 py-1 rounded-full">
             Featured
           </div>
         )}
         
         {course.tag && !featured && (
-          <div className="absolute top-3 left-3 bg-[#F5F0E8] text-foreground/70 text-xs px-3 py-1 rounded-full shadow-sm">
+          <div className="absolute top-3 left-3 bg-[#F8F7F2] text-[#2C2925]/70 text-xs px-3 py-1 rounded-full shadow-sm">
             {course.tag}
           </div>
         )}
         
         {course.level && (
-          <div className="absolute bottom-3 left-3 bg-white/90 text-foreground/70 text-xs px-3 py-1 rounded-full shadow-sm">
+          <div className="absolute bottom-3 left-3 bg-white/90 text-[#2C2925]/70 text-xs px-3 py-1 rounded-full shadow-sm">
             {course.level.charAt(0).toUpperCase() + course.level.slice(1)}
           </div>
         )}
       </div>
       
       <div className="flex flex-col flex-grow p-5 sm:p-6">
-        <h3 className="text-base sm:text-lg font-medium mb-1 text-foreground group-hover:text-[#D7A392] transition-colors">
+        <h3 className="text-base sm:text-lg font-medium mb-1 text-[#2C2925] group-hover:text-[#4A7B61] transition-colors">
           {course.title}
         </h3>
         
-        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+        <p className="text-sm text-[#706C66] mb-4 line-clamp-2">
           {course.description}
         </p>
         
         <div className="mt-auto">
           {course.instructor && (
-            <div className="text-xs text-muted-foreground mb-3">
-              Instructor: <span className="text-foreground">{course.instructor}</span>
+            <div className="text-xs text-[#706C66] mb-3">
+              Instructor: <span className="text-[#2C2925]">{course.instructor}</span>
             </div>
           )}
           
           <div className="flex items-center justify-between text-xs sm:text-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-2 sm:space-y-0">
-              <div className="flex items-center text-muted-foreground">
+              <div className="flex items-center text-[#706C66]">
                 <BookOpen size={14} strokeWidth={1.5} className="mr-1.5" />
                 <span>{course.lessons} lessons</span>
               </div>
-              <div className="flex items-center text-muted-foreground">
+              <div className="flex items-center text-[#706C66]">
                 <Clock size={14} strokeWidth={1.5} className="mr-1.5" />
                 <span>{course.weeks} weeks</span>
               </div>
             </div>
             
-            <div className="flex items-center text-[#D7A392]">
+            <div className="flex items-center text-[#4A7B61]">
               <Star size={14} strokeWidth={1.5} className="mr-1" fill="currentColor" />
               <span className="font-medium">{course.rating}</span>
             </div>
@@ -106,8 +106,8 @@ const CourseSection = ({ title, subtitle, courses }: { title: string, subtitle?:
   return (
     <section className="mb-12">
       <div className="mb-5">
-        <h2 className="text-xl font-medium text-foreground mb-1">{title}</h2>
-        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        <h2 className="text-xl font-medium text-[#2C2925] mb-1">{title}</h2>
+        {subtitle && <p className="text-sm text-[#706C66]">{subtitle}</p>}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -143,7 +143,7 @@ const MobileFilters = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-[#2C2925]/20 backdrop-blur-sm z-40"
             onClick={onClose}
           />
           
@@ -153,13 +153,13 @@ const MobileFilters = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed top-0 right-0 h-full w-[85%] max-w-md bg-background border-l border-border z-50 overflow-y-auto"
+            className="fixed top-0 right-0 h-full w-[85%] max-w-md bg-[#F8F7F2] border-l border-[#E8E6E1] z-50 overflow-y-auto"
           >
-            <div className="sticky top-0 bg-background border-b border-border z-10 flex justify-between items-center p-4">
+            <div className="sticky top-0 bg-[#F8F7F2] border-b border-[#E8E6E1] z-10 flex justify-between items-center p-4">
               <h2 className="font-medium text-lg tracking-tight">Filters</h2>
               <button 
                 onClick={onClose}
-                className="p-2 text-foreground hover:bg-[#F5F0E8]/50 rounded-full transition-colors"
+                className="p-2 text-[#2C2925] hover:bg-[#F8F7F2]/50 rounded-full transition-colors"
               >
                 <X size={20} strokeWidth={1.5} />
                 <span className="sr-only">Close</span>
@@ -169,7 +169,7 @@ const MobileFilters = ({
             <div className="p-4 space-y-6">
               {Object.entries(filterOptions).map(([key, options]) => (
                 <div key={key} className="space-y-3">
-                  <h3 className="font-medium capitalize text-foreground/90 tracking-tight">
+                  <h3 className="font-medium capitalize text-[#2C2925]/90 tracking-tight">
                     {key === 'category' ? 'Categories' : key === 'level' ? 'Level' : 'Duration'}
                   </h3>
                   
@@ -180,13 +180,13 @@ const MobileFilters = ({
                         onClick={() => onFilterChange(key, option.id)}
                         className={`flex items-center justify-between w-full px-3 py-2 text-left rounded-md transition-colors ${
                           selectedFilters[key] === option.id
-                            ? 'bg-[#F5F0E8] text-foreground font-medium'
-                            : 'hover:bg-[#F5F0E8]/30 text-muted-foreground'
+                            ? 'bg-[#F8F7F2] text-[#2C2925] font-medium'
+                            : 'hover:bg-[#F8F7F2]/30 text-[#706C66]'
                         }`}
                       >
                         <span>{option.label}</span>
                         {selectedFilters[key] === option.id && (
-                          <Check size={16} strokeWidth={1.5} className="text-[#D7A392]" />
+                          <Check size={16} strokeWidth={1.5} className="text-[#4A7B61]" />
                         )}
                       </button>
                     ))}
@@ -195,10 +195,10 @@ const MobileFilters = ({
               ))}
             </div>
             
-            <div className="sticky bottom-0 bg-background border-t border-border p-4">
+            <div className="sticky bottom-0 bg-[#F8F7F2] border-t border-[#E8E6E1] p-4">
               <button
                 onClick={onClose}
-                className="w-full py-2.5 px-4 bg-[#D7A392] text-white rounded-full transition-all hover:bg-[#D7A392]/90"
+                className="w-full py-2.5 px-4 bg-[#4A7B61] text-white rounded-full transition-all hover:bg-[#4A7B61]/90"
               >
                 Apply Filters
               </button>
@@ -419,21 +419,21 @@ export default function CoursesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-[#F8F7F2] text-[#2C2925]">
       {/* Content */}
       <div className="w-full px-4 md:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
         <div className="max-w-[90rem] mx-auto">
           {/* Header with decorative background */}
           <div className="relative rounded-xl overflow-hidden mb-8 mx-4 sm:mx-6 lg:mx-8">
-            <div className="absolute inset-0 bg-[#F5F0E8] opacity-70"></div>
+            <div className="absolute inset-0 bg-[#F8F7F2] opacity-70"></div>
             <div className="relative z-10 px-6 py-8 md:px-8 md:py-10">
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-white/90 text-foreground/70 mb-4">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-white/90 text-[#2C2925]/70 mb-4">
                 <span>Learn at your own pace</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground mb-2">
+              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-[#2C2925] mb-2">
                 Explore Our Courses
               </h1>
-              <p className="text-sm sm:text-base text-muted-foreground max-w-md">
+              <p className="text-sm sm:text-base text-[#706C66] max-w-md">
                 Thoughtfully designed courses for progressive faith journeys
               </p>
             </div>
@@ -446,20 +446,20 @@ export default function CoursesPage() {
               <div className="flex items-center gap-3 w-full md:w-auto">
                 <div className="relative flex-1 md:min-w-[280px]">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Search size={16} strokeWidth={1.5} className="text-muted-foreground" />
+                    <Search size={16} strokeWidth={1.5} className="text-[#706C66]" />
                   </div>
                   <input
                     type="text"
                     placeholder="Search courses..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="block w-full py-2.5 pl-10 pr-3 border border-border rounded-full bg-white text-foreground placeholder-muted-foreground focus:border-[#E8D5C8] focus:ring-[#E8D5C8] transition-all duration-200 min-h-[44px]"
+                    className="block w-full py-2.5 pl-10 pr-3 border border-[#E8E6E1] rounded-full bg-white text-[#2C2925] placeholder-[#706C66] focus:border-[#4A7B61] focus:ring-[#4A7B61] transition-all duration-200 min-h-[44px]"
                   />
                 </div>
                 
                 <button
                   onClick={() => setShowFilters(true)}
-                  className="flex items-center justify-center min-h-[44px] px-4 py-2 bg-white border border-border rounded-full text-foreground hover:bg-[#F5F0E8]/30 transition-all duration-200"
+                  className="flex items-center justify-center min-h-[44px] px-4 py-2 bg-white border border-[#E8E6E1] rounded-full text-[#2C2925] hover:bg-[#F8F7F2]/30 transition-all duration-200"
                 >
                   <Filter size={16} strokeWidth={1.5} className="mr-2" />
                   <span className="text-sm">Filters</span>
@@ -482,7 +482,7 @@ export default function CoursesPage() {
                     <button
                       key={`${key}-${value}`}
                       onClick={() => handleFilterChange(key as keyof typeof selectedFilters, 'all')}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#F5F0E8] text-foreground/70 text-xs hover:bg-[#E8D5C8]/50 transition-all duration-200"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#F8F7F2] text-[#2C2925]/70 text-xs hover:bg-[#4A7B61]/50 transition-all duration-200"
                     >
                       {option.label}
                       <X size={14} strokeWidth={1.5} />
@@ -491,7 +491,7 @@ export default function CoursesPage() {
                 })}
                 <button
                   onClick={resetFilters}
-                  className="text-xs text-[#D7A392] hover:underline underline-offset-4 flex items-center gap-1"
+                  className="text-xs text-[#4A7B61] hover:underline underline-offset-4 flex items-center gap-1"
                 >
                   <RotateCcw size={12} strokeWidth={1.5} />
                   Reset all
@@ -512,19 +512,19 @@ export default function CoursesPage() {
           {/* Featured Courses */}
           <div className="px-5 sm:px-8 lg:px-10">
             <div className="mb-5">
-              <h2 className="text-xl font-medium tracking-tight text-foreground mb-1">Featured Courses</h2>
+              <h2 className="text-xl font-medium tracking-tight text-[#2C2925] mb-1">Featured Courses</h2>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {isLoading ? (
                 Array(3).fill(0).map((_, index) => (
-                  <div key={index} className="rounded-2xl bg-white border border-border animate-pulse">
-                    <div className="aspect-video bg-[#F5F0E8] rounded-t-2xl"></div>
+                  <div key={index} className="rounded-2xl bg-white border border-[#E8E6E1] animate-pulse">
+                    <div className="aspect-video bg-[#F8F7F2] rounded-t-2xl"></div>
                     <div className="p-4 space-y-3">
-                      <div className="h-5 bg-[#F5F0E8] rounded-full w-2/3"></div>
-                      <div className="h-4 bg-[#F5F0E8] rounded-full w-full"></div>
-                      <div className="h-4 bg-[#F5F0E8] rounded-full w-3/4"></div>
-                      <div className="h-4 bg-[#F5F0E8] rounded-full w-1/2"></div>
+                      <div className="h-5 bg-[#F8F7F2] rounded-full w-2/3"></div>
+                      <div className="h-4 bg-[#F8F7F2] rounded-full w-full"></div>
+                      <div className="h-4 bg-[#F8F7F2] rounded-full w-3/4"></div>
+                      <div className="h-4 bg-[#F8F7F2] rounded-full w-1/2"></div>
                     </div>
                   </div>
                 ))
@@ -534,14 +534,14 @@ export default function CoursesPage() {
                 ))
               ) : (
                 <div className="col-span-1 md:col-span-3 py-10 text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F5F0E8] mb-4">
-                    <Search size={20} strokeWidth={1.5} className="text-[#D7A392]" />
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F8F7F2] mb-4">
+                    <Search size={20} strokeWidth={1.5} className="text-[#4A7B61]" />
                   </div>
-                  <p className="text-foreground font-medium mb-2">No courses found matching your filters</p>
-                  <p className="text-muted-foreground text-sm mb-4">Try adjusting your search or filters to find what you're looking for</p>
+                  <p className="text-[#2C2925] font-medium mb-2">No courses found matching your filters</p>
+                  <p className="text-[#706C66] text-sm mb-4">Try adjusting your search or filters to find what you're looking for</p>
                   <button
                     onClick={resetFilters}
-                    className="text-[#D7A392] hover:underline underline-offset-4 text-sm flex items-center mx-auto gap-1"
+                    className="text-[#4A7B61] hover:underline underline-offset-4 text-sm flex items-center mx-auto gap-1"
                   >
                     <RotateCcw size={14} strokeWidth={1.5} />
                     Reset filters
@@ -555,12 +555,12 @@ export default function CoursesPage() {
           <div className="space-y-12 sm:space-y-16 mt-8 px-5 sm:px-8 lg:px-10">
             <div className="mb-5 flex justify-between items-end">
               <div>
-                <h2 className="text-xl font-medium tracking-tight text-foreground mb-1">Biblical Studies</h2>
-                <p className="text-sm text-muted-foreground">Explore the foundations of faith</p>
+                <h2 className="text-xl font-medium tracking-tight text-[#2C2925] mb-1">Biblical Studies</h2>
+                <p className="text-sm text-[#706C66]">Explore the foundations of faith</p>
               </div>
               <Link 
                 href="/courses/biblical-studies"
-                className="text-sm text-[#D7A392] flex items-center gap-1 hover:underline underline-offset-4"
+                className="text-sm text-[#4A7B61] flex items-center gap-1 hover:underline underline-offset-4"
               >
                 View all
                 <ChevronRight size={14} strokeWidth={1.5} />
@@ -570,13 +570,13 @@ export default function CoursesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {isLoading ? (
                 Array(3).fill(0).map((_, index) => (
-                  <div key={index} className="rounded-2xl bg-white border border-border animate-pulse">
-                    <div className="aspect-video bg-[#F5F0E8] rounded-t-2xl"></div>
+                  <div key={index} className="rounded-2xl bg-white border border-[#E8E6E1] animate-pulse">
+                    <div className="aspect-video bg-[#F8F7F2] rounded-t-2xl"></div>
                     <div className="p-4 space-y-3">
-                      <div className="h-5 bg-[#F5F0E8] rounded-full w-2/3"></div>
-                      <div className="h-4 bg-[#F5F0E8] rounded-full w-full"></div>
-                      <div className="h-4 bg-[#F5F0E8] rounded-full w-3/4"></div>
-                      <div className="h-4 bg-[#F5F0E8] rounded-full w-1/2"></div>
+                      <div className="h-5 bg-[#F8F7F2] rounded-full w-2/3"></div>
+                      <div className="h-4 bg-[#F8F7F2] rounded-full w-full"></div>
+                      <div className="h-4 bg-[#F8F7F2] rounded-full w-3/4"></div>
+                      <div className="h-4 bg-[#F8F7F2] rounded-full w-1/2"></div>
                     </div>
                   </div>
                 ))
@@ -586,14 +586,14 @@ export default function CoursesPage() {
                 ))
               ) : (
                 <div className="col-span-1 md:col-span-3 py-10 text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F5F0E8] mb-4">
-                    <Search size={20} strokeWidth={1.5} className="text-[#D7A392]" />
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F8F7F2] mb-4">
+                    <Search size={20} strokeWidth={1.5} className="text-[#4A7B61]" />
                   </div>
-                  <p className="text-foreground font-medium mb-2">No biblical studies courses found matching your filters</p>
-                  <p className="text-muted-foreground text-sm mb-4">Try adjusting your search or filters to find what you're looking for</p>
+                  <p className="text-[#2C2925] font-medium mb-2">No biblical studies courses found matching your filters</p>
+                  <p className="text-[#706C66] text-sm mb-4">Try adjusting your search or filters to find what you're looking for</p>
                   <button
                     onClick={resetFilters}
-                    className="text-[#D7A392] hover:underline underline-offset-4 text-sm flex items-center mx-auto gap-1"
+                    className="text-[#4A7B61] hover:underline underline-offset-4 text-sm flex items-center mx-auto gap-1"
                   >
                     <RotateCcw size={14} strokeWidth={1.5} />
                     Reset filters
@@ -607,12 +607,12 @@ export default function CoursesPage() {
           <div className="space-y-12 sm:space-y-16 mt-8 px-5 sm:px-8 lg:px-10">
             <div className="mb-5 flex justify-between items-end">
               <div>
-                <h2 className="text-xl font-medium tracking-tight text-foreground mb-1">Theology</h2>
-                <p className="text-sm text-muted-foreground">Examine theological concepts with contemporary perspectives</p>
+                <h2 className="text-xl font-medium tracking-tight text-[#2C2925] mb-1">Theology</h2>
+                <p className="text-sm text-[#706C66]">Examine theological concepts with contemporary perspectives</p>
               </div>
               <Link 
                 href="/courses/theology"
-                className="text-sm text-[#D7A392] flex items-center gap-1 hover:underline underline-offset-4"
+                className="text-sm text-[#4A7B61] flex items-center gap-1 hover:underline underline-offset-4"
               >
                 View all
                 <ChevronRight size={14} strokeWidth={1.5} />
@@ -622,13 +622,13 @@ export default function CoursesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {isLoading ? (
                 Array(3).fill(0).map((_, index) => (
-                  <div key={index} className="rounded-2xl bg-white border border-border animate-pulse">
-                    <div className="aspect-video bg-[#F5F0E8] rounded-t-2xl"></div>
+                  <div key={index} className="rounded-2xl bg-white border border-[#E8E6E1] animate-pulse">
+                    <div className="aspect-video bg-[#F8F7F2] rounded-t-2xl"></div>
                     <div className="p-4 space-y-3">
-                      <div className="h-5 bg-[#F5F0E8] rounded-full w-2/3"></div>
-                      <div className="h-4 bg-[#F5F0E8] rounded-full w-full"></div>
-                      <div className="h-4 bg-[#F5F0E8] rounded-full w-3/4"></div>
-                      <div className="h-4 bg-[#F5F0E8] rounded-full w-1/2"></div>
+                      <div className="h-5 bg-[#F8F7F2] rounded-full w-2/3"></div>
+                      <div className="h-4 bg-[#F8F7F2] rounded-full w-full"></div>
+                      <div className="h-4 bg-[#F8F7F2] rounded-full w-3/4"></div>
+                      <div className="h-4 bg-[#F8F7F2] rounded-full w-1/2"></div>
                     </div>
                   </div>
                 ))
@@ -638,14 +638,14 @@ export default function CoursesPage() {
                 ))
               ) : (
                 <div className="col-span-1 md:col-span-3 py-10 text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F5F0E8] mb-4">
-                    <Search size={20} strokeWidth={1.5} className="text-[#D7A392]" />
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#F8F7F2] mb-4">
+                    <Search size={20} strokeWidth={1.5} className="text-[#4A7B61]" />
                   </div>
-                  <p className="text-foreground font-medium mb-2">No theology courses found matching your filters</p>
-                  <p className="text-muted-foreground text-sm mb-4">Try adjusting your search or filters to find what you're looking for</p>
+                  <p className="text-[#2C2925] font-medium mb-2">No theology courses found matching your filters</p>
+                  <p className="text-[#706C66] text-sm mb-4">Try adjusting your search or filters to find what you're looking for</p>
                   <button
                     onClick={resetFilters}
-                    className="text-[#D7A392] hover:underline underline-offset-4 text-sm flex items-center mx-auto gap-1"
+                    className="text-[#4A7B61] hover:underline underline-offset-4 text-sm flex items-center mx-auto gap-1"
                   >
                     <RotateCcw size={14} strokeWidth={1.5} />
                     Reset filters
@@ -657,16 +657,16 @@ export default function CoursesPage() {
           
           {/* Pagination */}
           <div className="flex justify-center items-center space-x-2 mt-10 mb-6">
-            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">
+            <button className="inline-flex items-center justify-center rounded-full border border-[#E8E6E1] w-10 h-10 text-sm text-[#706C66] hover:bg-[#F8F7F2]/30 hover:text-[#2C2925]">
               <span className="sr-only">Previous page</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
             </button>
-            <button className="inline-flex items-center justify-center rounded-full w-10 h-10 text-sm bg-[#E8D5C8] text-foreground">1</button>
-            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">2</button>
-            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">3</button>
-            <span className="text-muted-foreground mx-1">...</span>
-            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">6</button>
-            <button className="inline-flex items-center justify-center rounded-full border border-border w-10 h-10 text-sm text-muted-foreground hover:bg-[#F5F0E8]/30 hover:text-foreground">
+            <button className="inline-flex items-center justify-center rounded-full w-10 h-10 text-sm bg-[#4A7B61] text-white">1</button>
+            <button className="inline-flex items-center justify-center rounded-full border border-[#E8E6E1] w-10 h-10 text-sm text-[#706C66] hover:bg-[#F8F7F2]/30 hover:text-[#2C2925]">2</button>
+            <button className="inline-flex items-center justify-center rounded-full border border-[#E8E6E1] w-10 h-10 text-sm text-[#706C66] hover:bg-[#F8F7F2]/30 hover:text-[#2C2925]">3</button>
+            <span className="text-[#706C66] mx-1">...</span>
+            <button className="inline-flex items-center justify-center rounded-full border border-[#E8E6E1] w-10 h-10 text-sm text-[#706C66] hover:bg-[#F8F7F2]/30 hover:text-[#2C2925]">6</button>
+            <button className="inline-flex items-center justify-center rounded-full border border-[#E8E6E1] w-10 h-10 text-sm text-[#706C66] hover:bg-[#F8F7F2]/30 hover:text-[#2C2925]">
               <span className="sr-only">Next page</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
             </button>
