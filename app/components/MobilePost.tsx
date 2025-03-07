@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { Post } from '@/app/lib/types';
 import { PostComment } from '@/app/types/database';
@@ -26,15 +26,21 @@ const MobilePost = ({
   const [comments, setComments] = useState<PostComment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [localPost, setLocalPost] = useState(post); // Add local state for the post
 
   // Format date as "Mar 7"
-  const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
+  const formattedDate = new Date(localPost.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric'
   });
   
   // For content, show content with title as first line if title exists
-  const displayText = post.content || '';
+  const displayText = localPost.content || '';
+
+  // Update local post when props change
+  useEffect(() => {
+    setLocalPost(post);
+  }, [post]);
 
   const handleToggleComments = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -42,7 +48,7 @@ const MobilePost = ({
     
     // If no comment functionality, just view the post
     if (!onToggleComments) {
-      onViewPost(post.id);
+      onViewPost(localPost.id);
       return;
     }
     
@@ -58,7 +64,7 @@ const MobilePost = ({
     
     try {
       // Fetch the comments
-      const fetchedComments = await onToggleComments(post.id);
+      const fetchedComments = await onToggleComments(localPost.id);
       // Update state with fetched comments
       setComments(fetchedComments);
     } catch (error) {
@@ -75,7 +81,7 @@ const MobilePost = ({
     if (!currentUserId || !commentText.trim() || !onAddComment) return;
     
     try {
-      const newComment = await onAddComment(post.id, commentText.trim());
+      const newComment = await onAddComment(localPost.id, commentText.trim());
       if (newComment) {
         setComments(prev => [...prev, newComment]);
         setCommentText('');
@@ -89,12 +95,12 @@ const MobilePost = ({
     <div className="border-b border-[#E8E6E1] px-3 py-4">
       <div 
         className="flex gap-3"
-        onClick={() => onViewPost(post.id)}
+        onClick={() => onViewPost(localPost.id)}
       >
         {/* User avatar */}
         <img
-          src={post.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.full_name || 'User')}
-          alt={post.author?.full_name || 'User'}
+          src={localPost.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(localPost.author?.full_name || 'User')}
+          alt={localPost.author?.full_name || 'User'}
           className="w-12 h-12 rounded-full object-cover flex-shrink-0"
         />
         
@@ -103,7 +109,7 @@ const MobilePost = ({
           {/* Author info and date */}
           <div className="flex items-center">
             <span className="font-bold text-[15px] text-[#2C2925]">
-              {post.author?.full_name || 'Anonymous'}
+              {localPost.author?.full_name || 'Anonymous'}
             </span>
             <span className="text-[#706C66] text-[14px] ml-1.5">
               · {formattedDate}
@@ -111,9 +117,9 @@ const MobilePost = ({
           </div>
           
           {/* Post title & content combined */}
-          {post.title && (
+          {localPost.title && (
             <h3 className="font-bold text-[16px] mt-1 text-[#2C2925]">
-              {post.title}
+              {localPost.title}
             </h3>
           )}
           
@@ -123,10 +129,10 @@ const MobilePost = ({
           </p>
           
           {/* Category tag */}
-          {post.category && (
+          {localPost.category && (
             <div className="mb-2 mt-1">
               <span className="text-sm px-4 py-1.5 rounded-full bg-[#E8F5EE] text-[#4A7B61] font-normal">
-                {post.category}
+                {localPost.category}
               </span>
             </div>
           )}
@@ -137,15 +143,27 @@ const MobilePost = ({
               onClick={(e) => {
                 e.stopPropagation();
                 if (currentUserId) {
-                  onLikeToggle(post.id);
+                  // Create copies to track previous state
+                  const wasLiked = localPost.has_liked;
+                  const prevCount = localPost.likes || 0;
+                  
+                  // Optimistically update the UI
+                  setLocalPost({
+                    ...localPost,
+                    has_liked: !wasLiked,
+                    likes: Math.max(0, prevCount + (wasLiked ? -1 : 1))
+                  });
+                  
+                  // Call the parent handler to update the backend
+                  onLikeToggle(localPost.id);
                 }
               }}
               className="flex items-center gap-2"
-              aria-label={post.has_liked ? "Unlike" : "Like"}
+              aria-label={localPost.has_liked ? "Unlike" : "Like"}
             >
-              <HeartIcon isLiked={post.has_liked} />
-              <span className={`text-base ${post.has_liked ? "text-[#E74C3C]" : "text-[#706C66]"}`}>
-                {post.likes || 0}
+              <HeartIcon isLiked={localPost.has_liked} />
+              <span className={`text-base ${localPost.has_liked ? "text-[#E74C3C]" : "text-[#706C66]"}`}>
+                {localPost.likes || 0}
               </span>
             </button>
             
@@ -155,7 +173,7 @@ const MobilePost = ({
               aria-label="Comments"
             >
               <CommentIcon />
-              <span className="text-base text-[#706C66]">{post.comments || 0}</span>
+              <span className="text-base text-[#706C66]">{localPost.comments || 0}</span>
               {showComments ? (
                 <ChevronUp size={16} className="text-[#706C66]" />
               ) : (
@@ -249,7 +267,7 @@ const MobilePost = ({
               {currentUserId && onAddComment && (
                 <form onSubmit={handleSubmitComment} className="mt-3 mb-2 flex items-center gap-2">
                   <img
-                    src={post.currentUser?.avatar_url || 'https://ui-avatars.com/api/?name=User'}
+                    src={localPost.currentUser?.avatar_url || 'https://ui-avatars.com/api/?name=User'}
                     alt="Your avatar"
                     className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                   />

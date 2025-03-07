@@ -642,6 +642,52 @@ const CommunityPage = (): JSX.Element => {
     router.push('/community/create-post');
   };
   
+  // Extract fetchPosts into a separate function to make it reusable
+  const fetchPosts = async () => {
+    try {
+      setIsLoadingPosts(true);
+      const supabase = await createClient();
+      
+      // Fetch posts and check if current user liked them
+      const postsData = await getPosts(20);
+      if (currentUserId) {
+        const postsWithLikeStatus = await Promise.all(
+          postsData.map(async (post) => {
+            // Check if current user has liked this post
+            try {
+              const { data, error } = await supabase
+                .from('post_likes')
+                .select('id')
+                .eq('user_id', currentUserId)
+                .eq('post_id', post.id)
+                .maybeSingle();
+              
+              if (error) {
+                console.error('Error checking like status:', error);
+                return { ...post, has_liked: false };
+              }
+              
+              return {
+                ...post,
+                has_liked: !!data
+              };
+            } catch (err) {
+              console.error('Error checking post like status:', err);
+              return { ...post, has_liked: false };
+            }
+          })
+        );
+        setPosts(postsWithLikeStatus);
+      } else {
+        setPosts(postsData);
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setIsLoadingPosts(false);
+    }
+  };
+  
   useEffect(() => {
     const fetchData = async () => {
       setIsLoadingPosts(true);
@@ -660,40 +706,8 @@ const CommunityPage = (): JSX.Element => {
           setCurrentUser(profile);
         }
         
-        // Fetch posts and check if current user liked them
-        const postsData = await getPosts(20);
-        console.log('Posts data returned from getPosts:', postsData);
-        if (userId) {
-          const postsWithLikeStatus = await Promise.all(
-            postsData.map(async (post) => {
-              // Check if current user has liked this post
-              try {
-                const { data, error } = await supabase
-                  .from('post_likes')
-                  .select('id')
-                  .eq('user_id', userId)
-                  .eq('post_id', post.id)
-                  .maybeSingle();
-                
-                if (error) {
-                  console.error('Error checking like status:', error);
-                  return { ...post, has_liked: false };
-                }
-                
-                return {
-                  ...post,
-                  has_liked: !!data
-                };
-              } catch (err) {
-                console.error('Error checking post like status:', err);
-                return { ...post, has_liked: false };
-              }
-            })
-          );
-          setPosts(postsWithLikeStatus);
-        } else {
-          setPosts(postsData);
-        }
+        // Fetch posts (now using the separate function)
+        await fetchPosts();
         
         // Fetch groups and check if current user is a member
         const groupsData = await getGroups(8);
@@ -758,6 +772,12 @@ const CommunityPage = (): JSX.Element => {
     // Update in database
     try {
       await togglePostLike(currentUserId, postId);
+      
+      // Wait a short moment to allow the database to update
+      setTimeout(async () => {
+        // Refetch all posts to ensure we have the latest counts for both mobile and web views
+        await fetchPosts();
+      }, 500);
     } catch (error) {
       console.error('Error toggling post like:', error);
       // Revert optimistic update on error
@@ -792,41 +812,6 @@ const CommunityPage = (): JSX.Element => {
       // Revert optimistic update on error
       await fetchGroups();
     }
-  };
-
-  const fetchPosts = async () => {
-    if (!currentUserId) return;
-    
-    const postsData = await getPosts(20);
-    const supabase = await createClient();
-    
-    const postsWithLikeStatus = await Promise.all(
-      postsData.map(async (post) => {
-        try {
-          const { data, error } = await supabase
-            .from('post_likes')
-            .select('id')
-            .eq('user_id', currentUserId)
-            .eq('post_id', post.id)
-            .maybeSingle();
-          
-          if (error) {
-            console.error('Error checking like status:', error);
-            return { ...post, has_liked: false };
-          }
-          
-          return {
-            ...post,
-            has_liked: !!data
-          };
-        } catch (err) {
-          console.error('Error checking post like status:', err);
-          return { ...post, has_liked: false };
-        }
-      })
-    );
-    
-    setPosts(postsWithLikeStatus);
   };
 
   const fetchGroups = async () => {
