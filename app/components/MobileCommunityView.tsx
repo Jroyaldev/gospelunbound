@@ -7,7 +7,7 @@ import MobileFooter from './MobileFooter';
 import { Post, Group } from '@/app/lib/types';
 import { PostComment } from '@/app/types/database';
 import { createClient } from '@/app/lib/supabase/client';
-import { toggleCommentLike as toggleCommentLikeDB } from '@/app/lib/supabase/database';
+import { toggleCommentLike as toggleCommentLikeDB, deletePostComment, deletePost } from '@/app/lib/supabase/database';
 
 interface MobileCommunityViewProps {
   posts: Post[];
@@ -19,6 +19,7 @@ interface MobileCommunityViewProps {
   onGroupMembershipToggle: (groupId: string, isMember: boolean) => void;
   onCreatePost?: () => void;
   onCreateGroup?: () => void;
+  onPostDelete?: (postId: string) => void;
 }
 
 const MobileCommunityView = ({
@@ -30,7 +31,8 @@ const MobileCommunityView = ({
   onLikeToggle,
   onGroupMembershipToggle,
   onCreatePost,
-  onCreateGroup
+  onCreateGroup,
+  onPostDelete
 }: MobileCommunityViewProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState<'posts' | 'groups'>('posts');
   const router = useRouter();
@@ -171,30 +173,45 @@ const MobileCommunityView = ({
     if (!currentUserId) return;
     
     try {
-      const supabase = await createClient();
-      
-      // Call the database function to toggle the like instead of manual DB operations
-      await toggleCommentLikeDB(currentUserId, commentId);
-      
-      // Parse out the postId from the commentId or find it in another way
-      let postId = '';
-      // Try to determine post ID by looking at comment ID format or by querying
-      const { data: comment, error: commentError } = await supabase
-        .from('post_comments')
-        .select('post_id')
-        .eq('id', commentId)
-        .single();
-        
-      if (commentError) {
-        console.error('Error getting post ID from comment:', commentError);
-      } else if (comment) {
-        postId = comment.post_id;
-        
-        // Re-fetch the comments for this post to get updated like state with accurate counts
-        await fetchComments(postId);
-      }
+      // Call the database function to toggle the like with skipRevalidation
+      await toggleCommentLikeDB(currentUserId, commentId, true);
     } catch (error) {
       console.error('Error toggling comment like:', error);
+    }
+  };
+
+  // Function to delete a comment
+  const deleteComment = async (commentId: string): Promise<void> => {
+    if (!currentUserId) return;
+    
+    try {
+      // Call the database function to delete the comment
+      const success = await deletePostComment(currentUserId, commentId);
+      if (!success) {
+        console.error('Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+    }
+  };
+
+  // Add this function for post deletion
+  const handlePostDelete = async (postId: string): Promise<void> => {
+    if (!currentUserId) return;
+    
+    try {
+      // Call the database function to delete the post
+      const success = await deletePost(currentUserId, postId);
+      if (success) {
+        // If parent component provided a delete handler, call it
+        if (onPostDelete) {
+          onPostDelete(postId);
+        }
+      } else {
+        console.error('Failed to delete post');
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
     }
   };
 
@@ -216,6 +233,8 @@ const MobileCommunityView = ({
             onToggleComments={fetchComments}
             onAddComment={addComment}
             onCommentLike={toggleCommentLike}
+            onCommentDelete={deleteComment}
+            onPostDelete={handlePostDelete}
           />
         ) : (
           <div>

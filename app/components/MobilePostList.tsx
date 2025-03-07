@@ -13,6 +13,8 @@ interface MobilePostListProps {
   onToggleComments?: (postId: string) => Promise<PostComment[]>;
   onAddComment?: (postId: string, content: string) => Promise<PostComment | null>;
   onCommentLike?: (commentId: string) => Promise<void>;
+  onCommentDelete?: (commentId: string) => Promise<void>;
+  onPostDelete?: (postId: string) => void;
 }
 
 const MobilePostList = ({
@@ -23,7 +25,9 @@ const MobilePostList = ({
   isLoading = false,
   onToggleComments,
   onAddComment,
-  onCommentLike
+  onCommentLike,
+  onCommentDelete,
+  onPostDelete
 }: MobilePostListProps): JSX.Element => {
   const router = useRouter();
 
@@ -66,6 +70,8 @@ const MobilePostList = ({
           onToggleComments={onToggleComments}
           onAddComment={onAddComment}
           onCommentLike={onCommentLike}
+          onCommentDelete={onCommentDelete}
+          onPostDelete={onPostDelete}
         />
       ))}
     </div>

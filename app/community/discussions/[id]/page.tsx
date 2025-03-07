@@ -44,7 +44,7 @@ export default function PostPage() {
       setIsLoading(true);
 
       try {
-        const postData = await getPost(postId);
+        const postData = await getPost(postId, user ? user.id : undefined);
         setPost(postData);
         
         if (postData) {
@@ -52,9 +52,8 @@ export default function PostPage() {
           // Using type assertion to match types
           setComments(commentsData as unknown as PostComment[]);
           
-          if (user) {
-            const hasLiked = await isPostLikedByUser(user.id, postId);
-            setHasLiked(hasLiked);
+          if (user && postData.has_liked !== undefined) {
+            setHasLiked(postData.has_liked);
           }
         }
       } catch (error) {
@@ -83,7 +82,8 @@ export default function PostPage() {
     }
     
     try {
-      await togglePostLike(user.id, postId);
+      // Skip revalidation to prevent page refresh, since we're already updating the UI optimistically
+      await togglePostLike(user.id, postId, true);
     } catch (error) {
       console.error('Error toggling like:', error);
       // Revert the optimistic update

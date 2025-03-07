@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Send } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Send, MoreVertical, Trash2 } from 'lucide-react';
 import { Post } from '@/app/lib/types';
 import { PostComment } from '@/app/types/database';
 
@@ -11,7 +11,125 @@ interface MobilePostProps {
   onToggleComments?: (postId: string) => Promise<PostComment[]>;
   onAddComment?: (postId: string, content: string) => Promise<PostComment | null>;
   onCommentLike?: (commentId: string) => Promise<void>;
+  onCommentDelete?: (commentId: string) => Promise<void>;
+  onPostDelete?: (postId: string) => void;
 }
+
+// Define CommentActionMenu before it's used
+interface CommentActionMenuProps {
+  commentId: string;
+  onDelete: () => void;
+}
+
+const CommentActionMenu = ({ commentId, onDelete }: CommentActionMenuProps) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Close the menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  return (
+    <div className="relative ml-auto" ref={menuRef}>
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowMenu(!showMenu);
+        }}
+        className="p-1 rounded-full text-[#706C66] hover:bg-gray-100"
+        aria-label="Comment options"
+      >
+        <MoreVertical size={16} />
+      </button>
+      
+      {showMenu && (
+        <div className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowMenu(false);
+              onDelete();
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-gray-50"
+          >
+            <Trash2 size={14} />
+            <span>Delete</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Add a PostActionMenu component for post actions
+interface PostActionMenuProps {
+  postId: string;
+  onDelete: () => void;
+}
+
+const PostActionMenu = ({ postId, onDelete }: PostActionMenuProps) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Close the menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowMenu(!showMenu);
+        }}
+        className="p-1 rounded-full text-[#706C66] hover:bg-gray-100"
+        aria-label="Post options"
+      >
+        <MoreVertical size={18} />
+      </button>
+      
+      {showMenu && (
+        <div className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowMenu(false);
+              onDelete();
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-gray-50"
+          >
+            <Trash2 size={14} />
+            <span>Delete</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const MobilePost = ({ 
   post, 
@@ -20,27 +138,23 @@ const MobilePost = ({
   onViewPost,
   onToggleComments,
   onAddComment,
-  onCommentLike
+  onCommentLike,
+  onCommentDelete,
+  onPostDelete
 }: MobilePostProps) => {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [localPost, setLocalPost] = useState(post); // Add local state for the post
 
   // Format date as "Mar 7"
-  const formattedDate = new Date(localPost.created_at).toLocaleDateString('en-US', {
+  const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric'
   });
   
   // For content, show content with title as first line if title exists
-  const displayText = localPost.content || '';
-
-  // Update local post when props change
-  useEffect(() => {
-    setLocalPost(post);
-  }, [post]);
+  const displayText = post.content || '';
 
   const handleToggleComments = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -48,7 +162,7 @@ const MobilePost = ({
     
     // If no comment functionality, just view the post
     if (!onToggleComments) {
-      onViewPost(localPost.id);
+      onViewPost(post.id);
       return;
     }
     
@@ -64,7 +178,7 @@ const MobilePost = ({
     
     try {
       // Fetch the comments
-      const fetchedComments = await onToggleComments(localPost.id);
+      const fetchedComments = await onToggleComments(post.id);
       // Update state with fetched comments
       setComments(fetchedComments);
     } catch (error) {
@@ -81,7 +195,7 @@ const MobilePost = ({
     if (!currentUserId || !commentText.trim() || !onAddComment) return;
     
     try {
-      const newComment = await onAddComment(localPost.id, commentText.trim());
+      const newComment = await onAddComment(post.id, commentText.trim());
       if (newComment) {
         setComments(prev => [...prev, newComment]);
         setCommentText('');
@@ -95,12 +209,12 @@ const MobilePost = ({
     <div className="border-b border-[#E8E6E1] px-3 py-4">
       <div 
         className="flex gap-3"
-        onClick={() => onViewPost(localPost.id)}
+        onClick={() => onViewPost(post.id)}
       >
         {/* User avatar */}
         <img
-          src={localPost.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(localPost.author?.full_name || 'User')}
-          alt={localPost.author?.full_name || 'User'}
+          src={post.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.full_name || 'User')}
+          alt={post.author?.full_name || 'User'}
           className="w-12 h-12 rounded-full object-cover flex-shrink-0"
         />
         
@@ -109,17 +223,31 @@ const MobilePost = ({
           {/* Author info and date */}
           <div className="flex items-center">
             <span className="font-bold text-[15px] text-[#2C2925]">
-              {localPost.author?.full_name || 'Anonymous'}
+              {post.author?.full_name || 'Anonymous'}
             </span>
             <span className="text-[#706C66] text-[14px] ml-1.5">
               · {formattedDate}
             </span>
+            
+            {/* Add post options menu if user is the author */}
+            {currentUserId && post.author?.id === currentUserId && onPostDelete && (
+              <div className="ml-auto" onClick={(e) => e.stopPropagation()}>
+                <PostActionMenu 
+                  postId={post.id} 
+                  onDelete={() => {
+                    if (onPostDelete) {
+                      onPostDelete(post.id);
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
           
           {/* Post title & content combined */}
-          {localPost.title && (
+          {post.title && (
             <h3 className="font-bold text-[16px] mt-1 text-[#2C2925]">
-              {localPost.title}
+              {post.title}
             </h3>
           )}
           
@@ -129,10 +257,10 @@ const MobilePost = ({
           </p>
           
           {/* Category tag */}
-          {localPost.category && (
+          {post.category && (
             <div className="mb-2 mt-1">
               <span className="text-sm px-4 py-1.5 rounded-full bg-[#E8F5EE] text-[#4A7B61] font-normal">
-                {localPost.category}
+                {post.category}
               </span>
             </div>
           )}
@@ -143,27 +271,18 @@ const MobilePost = ({
               onClick={(e) => {
                 e.stopPropagation();
                 if (currentUserId) {
-                  // Create copies to track previous state
-                  const wasLiked = localPost.has_liked;
-                  const prevCount = localPost.likes || 0;
-                  
-                  // Optimistically update the UI
-                  setLocalPost({
-                    ...localPost,
-                    has_liked: !wasLiked,
-                    likes: Math.max(0, prevCount + (wasLiked ? -1 : 1))
-                  });
-                  
-                  // Call the parent handler to update the backend
-                  onLikeToggle(localPost.id);
+                  // Don't update local state here, just call the parent handler
+                  // The parent will optimistically update the posts array
+                  // which will then flow down to this component as a prop
+                  onLikeToggle(post.id);
                 }
               }}
               className="flex items-center gap-2"
-              aria-label={localPost.has_liked ? "Unlike" : "Like"}
+              aria-label={post.has_liked ? "Unlike" : "Like"}
             >
-              <HeartIcon isLiked={localPost.has_liked} />
-              <span className={`text-base ${localPost.has_liked ? "text-[#E74C3C]" : "text-[#706C66]"}`}>
-                {localPost.likes || 0}
+              <HeartIcon isLiked={post.has_liked} />
+              <span className={`text-base ${post.has_liked ? "text-[#E74C3C]" : "text-[#706C66]"}`}>
+                {post.likes || 0}
               </span>
             </button>
             
@@ -173,7 +292,7 @@ const MobilePost = ({
               aria-label="Comments"
             >
               <CommentIcon />
-              <span className="text-base text-[#706C66]">{localPost.comments || 0}</span>
+              <span className="text-base text-[#706C66]">{post.comments || 0}</span>
               {showComments ? (
                 <ChevronUp size={16} className="text-[#706C66]" />
               ) : (
@@ -223,6 +342,29 @@ const MobilePost = ({
                               day: 'numeric'
                             })}
                           </span>
+                          
+                          {/* Add three-dot menu for comment actions if user is author */}
+                          {currentUserId && comment.author?.id === currentUserId && (
+                            <CommentActionMenu 
+                              commentId={comment.id} 
+                              onDelete={() => {
+                                if (onCommentDelete && comment.id) {
+                                  // Remove comment from local state immediately
+                                  setComments(comments.filter(c => c.id !== comment.id));
+                                  // Call API to delete from database
+                                  onCommentDelete(comment.id).catch((error) => {
+                                    console.error('Error deleting comment:', error);
+                                    // If error, refetch comments
+                                    if (onToggleComments) {
+                                      onToggleComments(post.id).then(fetchedComments => {
+                                        setComments(fetchedComments);
+                                      });
+                                    }
+                                  });
+                                }
+                              }}
+                            />
+                          )}
                         </div>
                         <p className="text-sm text-[#2C2925] mt-0.5">{comment.content}</p>
                         
@@ -231,43 +373,28 @@ const MobilePost = ({
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              try {
-                                if (onCommentLike && comment.id) {
-                                  const wasLiked = comment.has_liked;
-                                  const prevCount = comment.likes || 0;
-                                  
-                                  // Create a new copy of comments with the updated like status
-                                  const updatedComments = comments.map(c => {
-                                    if (c.id === comment.id) {
-                                      return {
-                                        ...c,
-                                        has_liked: !wasLiked,
-                                        likes: Math.max(0, prevCount + (wasLiked ? -1 : 1))
-                                      };
-                                    }
-                                    return c;
-                                  });
-                                  
-                                  // Update state with the new array (proper React pattern)
-                                  setComments(updatedComments);
-                                  
-                                  // Call the API to update the database
-                                  onCommentLike(comment.id).catch(() => {
-                                    // Revert to previous state if API call fails
-                                    setComments(comments.map(c => {
-                                      if (c.id === comment.id) {
-                                        return {
-                                          ...c,
-                                          has_liked: wasLiked,
-                                          likes: prevCount
-                                        };
-                                      }
-                                      return c;
-                                    }));
-                                  });
-                                }
-                              } catch (err) {
-                                console.error('Error toggling comment like:', err);
+                              if (onCommentLike && comment.id && currentUserId) {
+                                // Create a new copy of comments with the updated like status
+                                const updatedComments = comments.map(c => {
+                                  if (c.id === comment.id) {
+                                    return {
+                                      ...c,
+                                      has_liked: !c.has_liked,
+                                      likes: Math.max(0, (c.likes || 0) + (c.has_liked ? -1 : 1))
+                                    };
+                                  }
+                                  return c;
+                                });
+                                
+                                // Update state with the new array (proper React pattern)
+                                setComments(updatedComments);
+                                
+                                // Call the API to update the database
+                                onCommentLike(comment.id).catch((error) => {
+                                  console.error('Error toggling comment like:', error);
+                                  // Revert to previous state if API call fails
+                                  setComments(comments);
+                                });
                               }
                             }}
                             className="flex items-center gap-1.5 text-xs text-[#706C66]"
@@ -286,7 +413,7 @@ const MobilePost = ({
               {currentUserId && onAddComment && (
                 <form onSubmit={handleSubmitComment} className="mt-3 mb-2 flex items-center gap-2">
                   <img
-                    src={localPost.currentUser?.avatar_url || 'https://ui-avatars.com/api/?name=User'}
+                    src={post.currentUser?.avatar_url || 'https://ui-avatars.com/api/?name=User'}
                     alt="Your avatar"
                     className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                   />

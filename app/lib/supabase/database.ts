@@ -535,6 +535,7 @@ export async function getPosts(
   limit: number = 10,
   offset: number = 0,
   category?: string,
+  userId?: string,
 ): Promise<Post[]> {
   const supabase = await createClient();
 
@@ -603,11 +604,27 @@ export async function getPosts(
               .select("*", { count: "exact", head: true })
               .eq("post_id", post.id);
               
+            // Check if current user has liked this post
+            let hasLiked = false;
+            if (userId) {
+              const { data: likeData, error: likeError } = await supabase
+                .from("post_likes")
+                .select("id")
+                .eq("user_id", userId)
+                .eq("post_id", post.id)
+                .maybeSingle();
+                
+              if (!likeError) {
+                hasLiked = !!likeData;
+              }
+            }
+              
             return {
               ...post,
               author: post.profiles,
               likes: likeCountError ? 0 : (likeCount || 0),
               comments: commentCountError ? 0 : (commentCount || 0),
+              has_liked: hasLiked,
               profiles: undefined,
             };
           })
@@ -620,7 +637,8 @@ export async function getPosts(
       return [];
     }
 
-    return data.map((post) => ({
+    // Process the regular query results
+    const processedPosts = data.map((post) => ({
       ...post,
       author: post.profiles,
       likes: post.post_likes?.[0]?.count || 0,
@@ -628,13 +646,39 @@ export async function getPosts(
       profiles: undefined,
       post_likes: undefined,
     })) as Post[];
+    
+    // If userId is provided, check which posts the user has liked
+    if (userId) {
+      const postsWithLikeStatus = await Promise.all(
+        processedPosts.map(async (post) => {
+          const { data: likeData, error: likeError } = await supabase
+            .from("post_likes")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("post_id", post.id)
+            .maybeSingle();
+            
+          return {
+            ...post,
+            has_liked: likeError ? false : !!likeData
+          };
+        })
+      );
+      
+      return postsWithLikeStatus;
+    }
+    
+    return processedPosts;
   } catch (e) {
     console.error("Exception in getPosts:", e);
     return [];
   }
 }
 
-export async function getPost(postId: string): Promise<Post | null> {
+export async function getPost(
+  postId: string, 
+  userId?: string
+): Promise<Post | null> {
   const supabase = await createClient();
 
   try {
@@ -681,17 +725,32 @@ export async function getPost(postId: string): Promise<Post | null> {
           .select("*", { count: "exact", head: true })
           .eq("post_id", postId);
         
-        // Get comment count
         const { count: commentCount, error: commentCountError } = await supabase
           .from("post_comments")
           .select("*", { count: "exact", head: true })
           .eq("post_id", postId);
-        
+          
+        // Check if the current user has liked this post
+        let hasLiked = false;
+        if (userId) {
+          const { data: likeData, error: likeError } = await supabase
+            .from("post_likes")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("post_id", postId)
+            .maybeSingle();
+            
+          if (!likeError) {
+            hasLiked = !!likeData;
+          }
+        }
+          
         return {
           ...fallbackResult.data,
           author: fallbackResult.data.profiles,
           likes: likeCountError ? 0 : (likeCount || 0),
           comments: commentCountError ? 0 : (commentCount || 0),
+          has_liked: hasLiked,
           profiles: undefined,
         } as Post;
       }
@@ -700,7 +759,7 @@ export async function getPost(postId: string): Promise<Post | null> {
       return null;
     }
 
-    return {
+    const post = {
       ...data,
       author: data.profiles,
       likes: data.post_likes?.[0]?.count || 0,
@@ -708,6 +767,20 @@ export async function getPost(postId: string): Promise<Post | null> {
       profiles: undefined,
       post_likes: undefined,
     } as Post;
+    
+    // If userId is provided, check if user has liked this post
+    if (userId) {
+      const { data: likeData, error: likeError } = await supabase
+        .from("post_likes")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("post_id", postId)
+        .maybeSingle();
+        
+      post.has_liked = likeError ? false : !!likeData;
+    }
+    
+    return post;
   } catch (e) {
     console.error("Exception in getPost:", e);
     return null;
@@ -841,6 +914,7 @@ export async function deletePost(
 export async function togglePostLike(
   userId: string,
   postId: string,
+  skipRevalidation: boolean = false
 ): Promise<boolean> {
   const supabase = await createClient();
 
@@ -877,8 +951,11 @@ export async function togglePostLike(
       });
     }
 
-    revalidatePath("/community");
-    revalidatePath(`/community/discussions/${postId}`);
+    // Only revalidate if not skipped (allows for client-side handling without refresh)
+    if (!skipRevalidation) {
+      revalidatePath("/community");
+      revalidatePath(`/community/discussions/${postId}`);
+    }
     return true;
   } catch (err) {
     console.error("Error toggling post like:", err);
@@ -1393,6 +1470,7 @@ export async function getGroupMembers(groupId: string): Promise<any[]> {
 export async function toggleCommentLike(
   userId: string,
   commentId: string,
+  skipRevalidation: boolean = false
 ): Promise<boolean> {
   const supabase = await createClient();
 
@@ -1423,16 +1501,18 @@ export async function toggleCommentLike(
       if (error) throw error;
     }
 
-    // Revalidate paths
-    const { data: comment } = await supabase
-      .from("post_comments")
-      .select("post_id")
-      .eq("id", commentId)
-      .single();
-    
-    if (comment) {
-      revalidatePath(`/community/discussions/${comment.post_id}`);
-      revalidatePath('/community');
+    // Revalidate paths only if not skipped
+    if (!skipRevalidation) {
+      const { data: comment } = await supabase
+        .from("post_comments")
+        .select("post_id")
+        .eq("id", commentId)
+        .single();
+      
+      if (comment) {
+        revalidatePath(`/community/discussions/${comment.post_id}`);
+        revalidatePath('/community');
+      }
     }
     
     return true;

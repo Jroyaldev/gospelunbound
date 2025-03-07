@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/app/lib/supabase/client';
-import { getPosts, getGroups, joinGroup, leaveGroup, togglePostLike, getProfile, getPostComments, createPostComment, toggleCommentLike, deletePostComment, deletePost } from '@/app/lib/supabase/database';
+import { getPosts, getGroups, joinGroup, leaveGroup, togglePostLike, getProfile, getPostComments, createPostComment, toggleCommentLike, deletePostComment, deletePost, isPostLikedByUser } from '@/app/lib/supabase/database';
 import { Post, Group, Profile } from '@/app/lib/types';
 import { PostComment } from '@/app/types/database';
 import { Search, Heart, MessageSquare, Plus, Send, X, ChevronDown, ChevronUp, MessageCircle, Reply, MoreVertical, Trash, Users } from 'lucide-react';
@@ -335,10 +335,22 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
     
     // Update in database
     try {
-      await toggleCommentLike(currentUserId, commentId);
+      // Skip revalidation to prevent page refresh, we're using optimistic UI updates
+      await toggleCommentLike(currentUserId, commentId, true);
     } catch (error) {
       console.error('Error toggling comment like:', error);
-      // Could revert the optimistic update here if needed
+      // Revert optimistic update on error
+      setComments(comments.map(comment => {
+        if (comment.id === commentId) {
+          const newLikeStatus = !comment.has_liked; // Toggle back
+          return {
+            ...comment,
+            has_liked: !newLikeStatus,
+            likes: (comment.likes || 0) + (newLikeStatus ? -1 : 1)
+          };
+        }
+        return comment;
+      }));
     }
   };
   
@@ -642,52 +654,6 @@ const CommunityPage = (): JSX.Element => {
     router.push('/community/create-post');
   };
   
-  // Extract fetchPosts into a separate function to make it reusable
-  const fetchPosts = async () => {
-    try {
-      setIsLoadingPosts(true);
-      const supabase = await createClient();
-      
-      // Fetch posts and check if current user liked them
-      const postsData = await getPosts(20);
-      if (currentUserId) {
-        const postsWithLikeStatus = await Promise.all(
-          postsData.map(async (post) => {
-            // Check if current user has liked this post
-            try {
-              const { data, error } = await supabase
-                .from('post_likes')
-                .select('id')
-                .eq('user_id', currentUserId)
-                .eq('post_id', post.id)
-                .maybeSingle();
-              
-              if (error) {
-                console.error('Error checking like status:', error);
-                return { ...post, has_liked: false };
-              }
-              
-              return {
-                ...post,
-                has_liked: !!data
-              };
-            } catch (err) {
-              console.error('Error checking post like status:', err);
-              return { ...post, has_liked: false };
-            }
-          })
-        );
-        setPosts(postsWithLikeStatus);
-      } else {
-        setPosts(postsData);
-      }
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-    } finally {
-      setIsLoadingPosts(false);
-    }
-  };
-  
   useEffect(() => {
     const fetchData = async () => {
       setIsLoadingPosts(true);
@@ -706,8 +672,13 @@ const CommunityPage = (): JSX.Element => {
           setCurrentUser(profile);
         }
         
-        // Fetch posts (now using the separate function)
-        await fetchPosts();
+        // Fetch posts with the userId we just got (not using the state variable which might not be updated yet)
+        try {
+          const postsData = await getPosts(20, 0, undefined, userId || undefined);
+          setPosts(postsData);
+        } catch (error) {
+          console.error('Error fetching posts:', error);
+        }
         
         // Fetch groups and check if current user is a member
         const groupsData = await getGroups(8);
@@ -752,18 +723,38 @@ const CommunityPage = (): JSX.Element => {
 
     fetchData();
   }, []);
+  
+  // Update the fetchPosts function to ensure it gets the current userId from state
+  const fetchPosts = async () => {
+    try {
+      setIsLoadingPosts(true);
+      
+      // Use the userId parameter in getPosts to get posts with like status
+      const postsData = await getPosts(20, 0, undefined, currentUserId || undefined);
+      setPosts(postsData);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setIsLoadingPosts(false);
+    }
+  };
 
   const handlePostLikeToggle = async (postId: string) => {
     if (!currentUserId) return;
     
+    // Find the post and get its current like status before updating
+    const postToUpdate = posts.find(p => p.id === postId);
+    if (!postToUpdate) return;
+    
+    const currentLikedStatus = postToUpdate.has_liked || false;
+    
     // Optimistically update UI
     setPosts(posts.map(post => {
       if (post.id === postId) {
-        const newLikeStatus = !post.has_liked;
         return {
           ...post,
-          has_liked: newLikeStatus,
-          likes: (post.likes || 0) + (newLikeStatus ? 1 : -1)
+          has_liked: !currentLikedStatus,
+          likes: (post.likes || 0) + (currentLikedStatus ? -1 : 1)
         };
       }
       return post;
@@ -771,17 +762,37 @@ const CommunityPage = (): JSX.Element => {
     
     // Update in database
     try {
-      await togglePostLike(currentUserId, postId);
+      // We don't need to refresh the entire community page, so we can skip revalidation
+      await togglePostLike(currentUserId, postId, true);
       
-      // Wait a short moment to allow the database to update
+      // Verify the like status changed correctly after a short delay
+      // This ensures our UI is in sync with the server state
       setTimeout(async () => {
-        // Refetch all posts to ensure we have the latest counts for both mobile and web views
-        await fetchPosts();
-      }, 500);
+        const isLiked = await isPostLikedByUser(currentUserId, postId);
+        setPosts(currentPosts => currentPosts.map(post => {
+          if (post.id === postId && post.has_liked !== isLiked) {
+            return {
+              ...post,
+              has_liked: isLiked,
+              likes: (post.likes || 0) + (isLiked ? 0 : -1) // Adjust likes if needed
+            };
+          }
+          return post;
+        }));
+      }, 300);
     } catch (error) {
       console.error('Error toggling post like:', error);
       // Revert optimistic update on error
-      await fetchPosts();
+      setPosts(posts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            has_liked: currentLikedStatus, // Revert to original state
+            likes: (post.likes || 0) + (currentLikedStatus ? 0 : -1) // Revert likes count
+          };
+        }
+        return post;
+      }));
     }
   };
 
@@ -890,6 +901,7 @@ const CommunityPage = (): JSX.Element => {
           onGroupMembershipToggle={handleGroupMembershipToggle}
           onCreatePost={handleCreatePost}
           onCreateGroup={() => router.push('/community/create-group')}
+          onPostDelete={handlePostDelete}
         />
       ) : (
         // Desktop View (existing code)
