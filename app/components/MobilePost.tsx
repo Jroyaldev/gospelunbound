@@ -236,15 +236,34 @@ const MobilePost = ({
                                   const wasLiked = comment.has_liked;
                                   const prevCount = comment.likes || 0;
                                   
-                                  comment.has_liked = !wasLiked;
-                                  comment.likes = Math.max(0, prevCount + (wasLiked ? -1 : 1));
+                                  // Create a new copy of comments with the updated like status
+                                  const updatedComments = comments.map(c => {
+                                    if (c.id === comment.id) {
+                                      return {
+                                        ...c,
+                                        has_liked: !wasLiked,
+                                        likes: Math.max(0, prevCount + (wasLiked ? -1 : 1))
+                                      };
+                                    }
+                                    return c;
+                                  });
                                   
-                                  setComments([...comments]);
+                                  // Update state with the new array (proper React pattern)
+                                  setComments(updatedComments);
                                   
+                                  // Call the API to update the database
                                   onCommentLike(comment.id).catch(() => {
-                                    comment.has_liked = wasLiked;
-                                    comment.likes = prevCount;
-                                    setComments([...comments]);
+                                    // Revert to previous state if API call fails
+                                    setComments(comments.map(c => {
+                                      if (c.id === comment.id) {
+                                        return {
+                                          ...c,
+                                          has_liked: wasLiked,
+                                          likes: prevCount
+                                        };
+                                      }
+                                      return c;
+                                    }));
                                   });
                                 }
                               } catch (err) {

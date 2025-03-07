@@ -7,6 +7,7 @@ import MobileFooter from './MobileFooter';
 import { Post, Group } from '@/app/lib/types';
 import { PostComment } from '@/app/types/database';
 import { createClient } from '@/app/lib/supabase/client';
+import { toggleCommentLike as toggleCommentLikeDB } from '@/app/lib/supabase/database';
 
 interface MobileCommunityViewProps {
   posts: Post[];
@@ -62,11 +63,17 @@ const MobileCommunityView = ({
   const fetchComments = async (postId: string): Promise<PostComment[]> => {
     try {
       const supabase = await createClient();
+      
+      // Use the proper query with comment_likes count
       const { data, error } = await supabase
-        .from('post_comments')
-        .select('*, author:profiles(id, username, full_name, avatar_url)')
-        .eq('post_id', postId)
-        .order('created_at', { ascending: true });
+        .from("post_comments")
+        .select(`
+          *,
+          profiles:user_id (id, username, full_name, avatar_url),
+          comment_likes:comment_likes(count)
+        `)
+        .eq("post_id", postId)
+        .order("created_at", { ascending: true });
 
       if (error) {
         console.error('Error fetching comments:', error);
@@ -75,10 +82,21 @@ const MobileCommunityView = ({
       
       if (!data) return [];
       
-      // If user is logged in, check if they've liked each comment
-      if (currentUserId) {
-        const commentsWithLikeStatus = await Promise.all(
-          data.map(async (comment) => {
+      // Process the data to include like counts and format it properly
+      const commentsWithMetadata = await Promise.all(
+        data.map(async (comment) => {
+          // Format comment with proper fields
+          const formattedComment = {
+            ...comment,
+            author: comment.profiles,
+            likes: comment.comment_likes?.[0]?.count || 0,
+            profiles: undefined,
+            comment_likes: undefined,
+            has_liked: false
+          };
+          
+          // If user is logged in, check if they've liked this comment
+          if (currentUserId) {
             try {
               const { data: likeData, error: likeError } = await supabase
                 .from('comment_likes')
@@ -87,26 +105,19 @@ const MobileCommunityView = ({
                 .eq('comment_id', comment.id)
                 .maybeSingle();
               
-              if (likeError) {
-                console.error('Error checking comment like status:', likeError);
-                return { ...comment, has_liked: false, likes: comment.likes || 0 };
+              if (!likeError) {
+                formattedComment.has_liked = !!likeData;
               }
-              
-              return {
-                ...comment,
-                has_liked: !!likeData
-              };
             } catch (err) {
               console.error('Error checking comment like status:', err);
-              return { ...comment, has_liked: false };
             }
-          })
-        );
-        
-        return commentsWithLikeStatus;
-      }
+          }
+          
+          return formattedComment;
+        })
+      );
       
-      return data;
+      return commentsWithMetadata as PostComment[];
     } catch (error) {
       console.error('Error fetching comments:', error);
       return [];
@@ -162,52 +173,24 @@ const MobileCommunityView = ({
     try {
       const supabase = await createClient();
       
-      // Check if user has already liked this comment
-      const { data: existingLike, error: existingLikeError } = await supabase
-        .from('comment_likes')
-        .select('id')
-        .eq('user_id', currentUserId)
-        .eq('comment_id', commentId)
-        .maybeSingle();
+      // Call the database function to toggle the like instead of manual DB operations
+      await toggleCommentLikeDB(currentUserId, commentId);
       
-      if (existingLikeError) {
-        console.error('Error checking existing like:', existingLikeError);
-        return;
-      }
-      
-      const isLiked = !!existingLike;
-      
-      if (isLiked) {
-        // Unlike: delete the like
-        const { error: unlikeError } = await supabase
-          .from('comment_likes')
-          .delete()
-          .eq('id', existingLike.id);
-          
-        if (unlikeError) {
-          console.error('Error unliking comment:', unlikeError);
-          return;
-        }
-      } else {
-        // Like: insert a new like
-        const { error: likeError } = await supabase
-          .from('comment_likes')
-          .insert({
-            user_id: currentUserId,
-            comment_id: commentId,
-            created_at: new Date().toISOString()
-          });
-          
-        if (likeError) {
-          console.error('Error liking comment:', likeError);
-          return;
-        }
-      }
-      
-      // Re-fetch the comments for this post to get updated like state
-      // This ensures the UI is updated correctly
-      const postId = commentId.split('_')[0]; // Assuming comment IDs are formatted as postId_commentId
-      if (postId) {
+      // Parse out the postId from the commentId or find it in another way
+      let postId = '';
+      // Try to determine post ID by looking at comment ID format or by querying
+      const { data: comment, error: commentError } = await supabase
+        .from('post_comments')
+        .select('post_id')
+        .eq('id', commentId)
+        .single();
+        
+      if (commentError) {
+        console.error('Error getting post ID from comment:', commentError);
+      } else if (comment) {
+        postId = comment.post_id;
+        
+        // Re-fetch the comments for this post to get updated like state with accurate counts
         await fetchComments(postId);
       }
     } catch (error) {
