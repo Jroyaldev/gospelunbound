@@ -4,22 +4,24 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/app/lib/supabase/client';
-import { getPosts, getGroups, joinGroup, leaveGroup, togglePostLike, getProfile, getPostComments, createPostComment, toggleCommentLike } from '@/app/lib/supabase/database';
+import { getPosts, getGroups, joinGroup, leaveGroup, togglePostLike, getProfile, getPostComments, createPostComment, toggleCommentLike, deletePostComment, deletePost } from '@/app/lib/supabase/database';
 import { Post, Group, Profile } from '@/app/lib/types';
 import { PostComment } from '@/app/types/database';
-import { Search, Heart, MessageSquare, Plus, Send, X, ChevronDown, ChevronUp, MessageCircle, Reply } from 'lucide-react';
+import { Search, Heart, MessageSquare, Plus, Send, X, ChevronDown, ChevronUp, MessageCircle, Reply, MoreVertical, Trash } from 'lucide-react';
 
 interface DiscussionCardProps {
   post: Post;
   currentUserId: string | null;
   currentUser: Profile | null;
   onLikeToggle: (postId: string) => void;
+  onDeletePost?: (postId: string) => void;
 }
 
 interface CommentItemProps {
   comment: PostComment;
   currentUserId: string | null;
   onLikeToggle: (commentId: string) => void;
+  onDeleteComment: (commentId: string) => void;
   isParentComment?: boolean;
 }
 
@@ -28,11 +30,42 @@ const CommentItem = ({
   comment, 
   currentUserId, 
   onLikeToggle,
+  onDeleteComment,
   isParentComment = true
 }: CommentItemProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const commentContent = comment.content || '';
   const isLongComment = commentContent.length > 200;
+  const isOwnComment = currentUserId === comment.user_id;
+  const optionsRef = useRef<HTMLDivElement>(null);
+  
+  // For debugging and verification
+  useEffect(() => {
+    if (isOwnComment) {
+      console.log(`Comment ${comment.id} by current user:`, {
+        isParentComment: isParentComment,
+        hasParentId: !!comment.parent_id,
+        content: comment.content?.substring(0, 20) + '...'
+      });
+    }
+  }, []);
+  
+  // Close options menu when clicking outside
+  useEffect(() => {
+    if (!showOptions) return;
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showOptions]);
   
   const formattedDate = new Date(comment.created_at).toLocaleDateString('en-US', {
     month: 'short',
@@ -49,7 +82,38 @@ const CommentItem = ({
       <div className="flex-1">
         <div className="flex justify-between items-center">
           <span className="text-xs font-medium text-[#2C2925]">{comment.author?.full_name || 'Anonymous'}</span>
-          <span className="text-xs text-[#706C66]">{formattedDate}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#706C66]">{formattedDate}</span>
+            {isOwnComment && (
+              <div className="relative">
+                <button 
+                  onClick={() => setShowOptions(!showOptions)}
+                  className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-1 rounded-full hover:bg-[#F5F4F2]"
+                  aria-label="Comment options"
+                >
+                  <MoreVertical size={16} className={isParentComment ? "text-[#58534D]" : ""} />
+                </button>
+                
+                {showOptions && (
+                  <div 
+                    ref={optionsRef}
+                    className="absolute right-0 top-6 bg-white shadow-md rounded-md py-1 z-10 min-w-[120px] border border-[#E8E6E1]"
+                  >
+                    <button
+                      onClick={() => {
+                        onDeleteComment(comment.id);
+                        setShowOptions(false);
+                      }}
+                      className="flex items-center w-full px-3 py-2 text-xs text-left text-red-600 hover:bg-gray-100"
+                    >
+                      <Trash size={14} className="mr-2" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         <div className="text-sm text-[#706C66] whitespace-pre-wrap mt-1">
           {isLongComment && !isExpanded
@@ -83,7 +147,7 @@ const CommentItem = ({
   );
 };
 
-const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle }: DiscussionCardProps): JSX.Element => {
+const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDeletePost }: DiscussionCardProps): JSX.Element => {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
@@ -91,11 +155,30 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle }: Disc
   const [commentCount, setCommentCount] = useState(post.comments || 0);
   const [hasMoreComments, setHasMoreComments] = useState(false);
   const commentsContainerRef = useRef<HTMLDivElement>(null);
+  const [showOptions, setShowOptions] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
   
   const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric'
   });
+  
+  // Check if user is the author of the post
+  const isOwnPost = currentUserId && post.author?.id === currentUserId;
+  
+  // Close options menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   
   // Check if comments container has scrollable content
   const checkForMoreComments = useCallback(() => {
@@ -246,63 +329,148 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle }: Disc
       // Could revert the optimistic update here if needed
     }
   };
+  
+  const handleDeleteComment = async (commentId: string) => {
+    if (!currentUserId) return;
+    
+    // Find the comment to be deleted
+    const commentToDelete = comments.find(c => c.id === commentId);
+    if (!commentToDelete) return;
+    
+    // Optimistically update UI - remove comment and any replies
+    const isParentComment = !commentToDelete.parent_id;
+    
+    // If parent comment, remove it and all replies
+    if (isParentComment) {
+      const childCommentIds = comments
+        .filter(c => c.parent_id === commentId)
+        .map(c => c.id);
+      
+      // Filter out deleted comment and its replies
+      setComments(comments.filter(c => c.id !== commentId && !childCommentIds.includes(c.id)));
+      setCommentCount(prev => prev - 1 - childCommentIds.length);
+    } else {
+      // Just remove the reply
+      setComments(comments.filter(c => c.id !== commentId));
+      setCommentCount(prev => prev - 1);
+    }
+    
+    // Update in database
+    try {
+      const success = await deletePostComment(currentUserId, commentId);
+      if (!success) {
+        console.error('Failed to delete comment');
+        // Could reload comments here to reset state
+        toggleComments();
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      // Could reload comments here to reset state
+      toggleComments();
+    }
+  };
 
   return (
-    <div className="py-5 border-b border-[#E8E6E1]/60">
-      <div className="flex items-start gap-3">
+    <div className="p-5">
+      <div className="flex items-start gap-4">
         <img
           src={post.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.full_name || 'User')}
           alt={post.author?.full_name || 'User'}
-          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+          className="w-11 h-11 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1] shadow-sm"
         />
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium text-[#2C2925]">{post.author?.full_name || 'Anonymous'}{post.author?.username === 'jonny' && ' (2)'}</span>
-            <span className="text-xs text-[#706C66]">{formattedDate}</span>
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-[#2C2925]">{post.author?.full_name || 'Anonymous'}{post.author?.username === 'jonny' && ' (2)'}</span>
+              <span className="mx-2 text-[#E8E6E1]">•</span>
+              <span className="text-xs text-[#706C66]">{formattedDate}</span>
+            </div>
+            
+            {isOwnPost && (
+              <div className="relative">
+                <button 
+                  onClick={() => setShowOptions(!showOptions)}
+                  className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-2 rounded-full hover:bg-[#F5F4F2]"
+                  aria-label="Post options"
+                >
+                  <MoreVertical size={18} strokeWidth={2} className="text-[#58534D]" />
+                </button>
+                
+                {showOptions && (
+                  <div 
+                    ref={optionsRef}
+                    className="absolute right-0 top-8 bg-white shadow-md rounded-md py-1 z-10 min-w-[140px] border border-[#E8E6E1]"
+                  >
+                    <button
+                      onClick={() => {
+                        if (onDeletePost) {
+                          onDeletePost(post.id);
+                        }
+                        setShowOptions(false);
+                      }}
+                      className="flex items-center w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-gray-100"
+                    >
+                      <Trash size={16} className="mr-2" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
-          <h3 className="text-base font-medium text-[#2C2925] mb-1.5">
-            {post.title}
-          </h3>
+          <Link 
+            href={`/community/discussions/${post.id}`} 
+            className="block group no-underline hover:no-underline focus:no-underline active:no-underline text-inherit"
+          >
+            <h3 className="text-lg font-semibold text-[#2C2925] mb-2.5 group-hover:text-[#4A7B61] transition-colors no-underline leading-tight">
+              {post.title}
+            </h3>
+            
+            {post.content && (
+              <p className="text-[15px] text-[#58534D] mb-3.5 line-clamp-2 leading-relaxed no-underline">
+                {post.content}
+              </p>
+            )}
+          </Link>
           
-          {post.content && (
-            <p className="text-sm text-[#706C66] mb-3">
-              {post.content}
-            </p>
-          )}
-          
-          <div className="flex items-center space-x-5 mt-1">
+          <div className="flex items-center mt-3.5">
             {post.category && (
-              <span className="text-sm text-[#706C66]">{post.category}</span>
+              <span className="text-xs px-3.5 py-1.5 bg-[#F8F7F2] rounded-full text-[#4A7B61] font-medium border border-[#E8E6E1]/50">{post.category}</span>
             )}
             
-            <div className="flex items-center ml-auto">
+            <div className="flex items-center ml-auto space-x-5">
               <button 
                 onClick={() => {
                   if (currentUserId) {
                     onLikeToggle(post.id);
                   }
                 }}
-                className="flex items-center mr-4"
+                className="flex items-center hover:text-[#E74C3C] transition-colors group"
               >
                 <Heart 
-                  size={16} 
-                  className={`${post.has_liked ? "text-[#E74C3C] fill-[#E74C3C]" : "text-[#706C66]"}`}
+                  size={18} 
+                  className={`${post.has_liked ? "text-[#E74C3C] fill-[#E74C3C]" : "text-[#706C66] group-hover:text-[#E74C3C]/70"} mr-1.5`}
+                  strokeWidth={post.has_liked ? 0 : 2}
                 />
-                <span className="text-xs ml-1 text-[#706C66]">{post.likes || 0}</span>
+                <span className={`text-xs font-medium ${post.has_liked ? "text-[#E74C3C]" : "text-[#706C66] group-hover:text-[#E74C3C]/70"}`}>{post.likes || 0}</span>
               </button>
               
               <button 
                 onClick={toggleComments}
-                className="flex items-center"
+                className="flex items-center hover:text-[#4A7B61] transition-colors group"
               >
-                <MessageSquare size={16} className="text-[#706C66]" />
-                <span className="text-xs ml-1 text-[#706C66]">{commentCount}</span>
+                <MessageSquare 
+                  size={18} 
+                  className={`text-[#706C66] mr-1.5 group-hover:text-[#4A7B61]/70`} 
+                  strokeWidth={2} 
+                />
+                <span className="text-xs font-medium text-[#706C66] group-hover:text-[#4A7B61]/70">{commentCount}</span>
                 {showComments ? (
-                  <ChevronUp size={16} className="ml-1 text-[#706C66]" />
+                  <ChevronUp size={16} className="ml-1 text-[#706C66] group-hover:text-[#4A7B61]/70" strokeWidth={2} />
                 ) : (
-                  <ChevronDown size={16} className="ml-1 text-[#706C66]" />
+                  <ChevronDown size={16} className="ml-1 text-[#706C66] group-hover:text-[#4A7B61]/70" strokeWidth={2} />
                 )}
               </button>
             </div>
@@ -333,6 +501,8 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle }: Disc
                         comment={comment} 
                         currentUserId={currentUserId} 
                         onLikeToggle={handleCommentLikeToggle}
+                        onDeleteComment={handleDeleteComment}
+                        isParentComment={!comment.parent_id}
                       />
                     ))}
                   </div>
@@ -363,8 +533,7 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle }: Disc
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
                         placeholder="Add a comment..."
-                        className="w-full border border-[#E8E6E1] rounded-lg p-2 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-[#6B8068] resize-none min-h-[60px]"
-                        autoFocus
+                        className="w-full border border-[#E8E6E1] rounded-lg p-2 pr-10 text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[#6B8068] resize-none min-h-[60px]"
                       ></textarea>
                       <button
                         type="submit"
@@ -403,11 +572,21 @@ const GroupCard = ({ group, currentUserId, onMembershipToggle }: GroupCardProps)
   const membersCount = group.members || 0;
 
   return (
-    <div className="py-5 border-b border-[#E8E6E1]/60 relative">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-base font-medium text-[#2C2925] mb-1">{group.name}</h3>
-          <p className="text-sm text-[#706C66]">{membersCount} {membersCount === 1 ? 'member' : 'members'}</p>
+    <div className="p-5 relative">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-[#2C2925] mb-2 hover:text-[#4A7B61] transition-colors leading-tight">{group.name}</h3>
+          <div className="flex items-center">
+            <span className="inline-flex items-center text-sm text-[#58534D]">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-[#4A7B61]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <path d="M20 8v6"></path>
+                <path d="M23 11h-6"></path>
+              </svg>
+              {membersCount} {membersCount === 1 ? 'member' : 'members'}
+            </span>
+          </div>
         </div>
         
         {currentUserId && (
@@ -416,18 +595,21 @@ const GroupCard = ({ group, currentUserId, onMembershipToggle }: GroupCardProps)
               e.preventDefault();
               onMembershipToggle(group.id, !!group.is_member);
             }}
-            className={`text-xs font-medium px-3 py-1 rounded-full border ${
+            className={`text-sm font-medium px-4 py-2 rounded-full border transition-all ${
               group.is_member 
-                ? 'border-red-300 text-red-500 hover:bg-red-50' 
-                : 'border-[#4A7B61]/30 text-[#4A7B61] hover:bg-[#4A7B61]/10'
-            }`}
+                ? 'border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400' 
+                : 'border-[#4A7B61]/30 text-[#4A7B61] hover:bg-[#4A7B61]/10 hover:border-[#4A7B61]/60'
+            } shadow-sm ml-3`}
           >
             {group.is_member ? 'Leave' : 'Join'}
           </button>
         )}
       </div>
       
-      <Link href={`/community/groups/${group.id}`} className="absolute inset-0">
+      <Link 
+        href={`/community/groups/${group.id}`} 
+        className="absolute inset-0 no-underline hover:no-underline focus:no-underline"
+      >
         <span className="sr-only">View group: {group.name}</span>
       </Link>
     </div>
@@ -442,10 +624,15 @@ const CreatePostButton = ({ currentUserId }: { currentUserId: string | null }): 
   return (
     <button 
       onClick={() => router.push('/community/create-post')}
-      className="fixed bottom-6 right-6 flex items-center justify-center bg-[#4A7B61] text-white rounded-full w-12 h-12 shadow-md hover:bg-[#3A6B51] transition-colors z-10"
+      className="fixed bottom-8 right-8 flex items-center justify-center bg-[#4A7B61] text-white rounded-full w-16 h-16 shadow-lg hover:shadow-xl hover:bg-[#3A6B51] transition-all z-10 hover:scale-105 active:scale-95"
       aria-label="Create Post"
     >
-      <Plus size={20} />
+      <Plus 
+        size={28} 
+        strokeWidth={2.5} 
+        className="transform transition-transform duration-300 group-hover:rotate-90" 
+      />
+      <span className="sr-only">Create new post</span>
     </button>
   );
 };
@@ -686,50 +873,94 @@ const CommunityPage = (): JSX.Element => {
     console.log('Searching for:', searchTerm);
   };
 
+  const handlePostDelete = async (postId: string) => {
+    if (!currentUserId) return;
+    
+    // Optimistically update UI - remove post
+    setPosts(posts.filter(p => p.id !== postId));
+    
+    // Update in database
+    try {
+      const success = await deletePost(currentUserId, postId);
+      if (!success) {
+        console.error('Failed to delete post');
+        // Could reload posts here to reset state
+        fetchPosts();
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      // Could reload posts here to reset state
+      fetchPosts();
+    }
+  };
+
   return (
     <div className="bg-white min-h-screen">
-      <div className="max-w-[780px] mx-auto px-4">
-        <div className="flex items-center justify-between py-6">
-          <h1 className="text-xl font-medium text-[#2C2925]">Community</h1>
-          
-          <div className="relative">
-            <form onSubmit={handleSearch} className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search"
-                className="w-[220px] pl-9 pr-4 py-2 bg-[#F8F7F2] rounded-md text-sm focus:outline-none"
-              />
-              <Search size={15} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#706C66]" />
-              <button type="submit" className="sr-only">Search</button>
-            </form>
+      {/* Mobile-optimized Header */}
+      <div className="bg-gradient-to-b from-[#F8F7F2] to-white">
+        <div className="max-w-[780px] mx-auto px-4">
+          {/* Title and search area with improved spacing */}
+          <div className="pt-7 sm:pt-10 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+              <div className="relative flex justify-center sm:justify-start mt-3 sm:mt-0">
+                <div className="relative">
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-[#2C2925] text-center sm:text-left">Community</h1>
+                  <div className="absolute -bottom-1.5 left-1/2 sm:left-0 transform -translate-x-1/2 sm:translate-x-0 w-10 h-1 bg-[#4A7B61] rounded-full opacity-70"></div>
+                </div>
+              </div>
+              
+              {/* Search field - full width on mobile */}
+              <div className="w-full sm:w-auto mt-4 sm:mt-0">
+                <form onSubmit={handleSearch} className="relative">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search discussions..."
+                    className="w-full sm:w-[240px] h-11 pl-11 pr-4 py-2 bg-white border border-[#E8E6E1] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7B61]/20 focus:border-[#4A7B61] shadow-sm transition-all hover:border-[#4A7B61]/30"
+                  />
+                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#4A7B61]">
+                    <Search size={18} strokeWidth={2} />
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+            
+          {/* Tabs - centered on mobile */}
+          <div className="flex justify-center sm:justify-start pl-0 border-b border-[#E8E6E1] mt-2">
+            <button 
+              onClick={() => setActiveTab('discussions')}
+              className={`relative text-sm font-medium py-3.5 px-6 transition-all ${
+                activeTab === 'discussions' 
+                  ? 'text-[#4A7B61] font-semibold' 
+                  : 'text-[#706C66] hover:text-[#4A7B61]/80'
+              }`}
+            >
+              Discussions
+              {activeTab === 'discussions' && (
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#4A7B61] rounded-full"></div>
+              )}
+            </button>
+            <button 
+              onClick={() => setActiveTab('groups')}
+              className={`relative text-sm font-medium py-3.5 px-6 transition-all ${
+                activeTab === 'groups' 
+                  ? 'text-[#4A7B61] font-semibold' 
+                  : 'text-[#706C66] hover:text-[#4A7B61]/80'
+              }`}
+            >
+              Groups
+              {activeTab === 'groups' && (
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#4A7B61] rounded-full"></div>
+              )}
+            </button>
           </div>
         </div>
-        
-        <div className="flex border-b border-[#4A7B61]/20 mb-4">
-          <button 
-            onClick={() => setActiveTab('discussions')}
-            className={`text-sm font-medium py-2 px-8 transition-colors border-b-2 ${
-              activeTab === 'discussions' 
-                ? 'text-[#4A7B61] border-[#4A7B61]' 
-                : 'text-[#706C66] border-transparent'
-            }`}
-          >
-            Discussions
-          </button>
-          <button 
-            onClick={() => setActiveTab('groups')}
-            className={`text-sm font-medium py-2 px-8 transition-colors border-b-2 ${
-              activeTab === 'groups' 
-                ? 'text-[#4A7B61] border-[#4A7B61]' 
-                : 'text-[#706C66] border-transparent'
-            }`}
-          >
-            Groups
-          </button>
-        </div>
-        
+      </div>
+      
+      {/* Main content with better spacing */}
+      <div className="max-w-[780px] mx-auto px-4 mt-5 sm:mt-7 pb-24">
         {isLoading ? (
           <div className="flex justify-center items-center py-16">
             <div className="w-8 h-8 border-2 border-[#4A7B61] border-t-transparent rounded-full animate-spin"></div>
@@ -739,24 +970,26 @@ const CommunityPage = (): JSX.Element => {
             {activeTab === 'discussions' && (
               <div>
                 {posts.length > 0 ? (
-                  <div>
+                  <div className="bg-white rounded-xl shadow-sm border border-[#E8E6E1] overflow-hidden divide-y divide-[#E8E6E1]/60">
                     {posts.map((post) => (
-                      <DiscussionCard 
-                        key={post.id} 
-                        post={post} 
-                        currentUserId={currentUserId} 
-                        currentUser={currentUser} 
-                        onLikeToggle={handlePostLikeToggle} 
-                      />
+                      <div key={post.id} className="hover:bg-[#FAFAFA]/80 transition-colors duration-200">
+                        <DiscussionCard 
+                          post={post} 
+                          currentUserId={currentUserId} 
+                          currentUser={currentUser} 
+                          onLikeToggle={handlePostLikeToggle}
+                          onDeletePost={handlePostDelete}
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-16">
+                  <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-[#E8E6E1]">
                     <p className="text-sm text-[#706C66] mb-4">No discussions yet</p>
                     {currentUserId && (
                       <button
                         onClick={() => router.push('/community/create-post')}
-                        className="px-4 py-2 bg-[#4A7B61] text-white text-sm rounded-full"
+                        className="px-6 py-2.5 bg-[#4A7B61] text-white text-sm rounded-full shadow-sm hover:bg-[#3A6B51] transition-colors font-medium"
                       >
                         Start a discussion
                       </button>
@@ -769,23 +1002,24 @@ const CommunityPage = (): JSX.Element => {
             {activeTab === 'groups' && (
               <div>
                 {groups.length > 0 ? (
-                  <div>
+                  <div className="bg-white rounded-xl shadow-sm border border-[#E8E6E1] overflow-hidden divide-y divide-[#E8E6E1]/60">
                     {groups.map((group) => (
-                      <GroupCard 
-                        key={group.id} 
-                        group={group} 
-                        currentUserId={currentUserId} 
-                        onMembershipToggle={handleGroupMembershipToggle} 
-                      />
+                      <div key={group.id} className="hover:bg-[#FAFAFA]/80 transition-colors duration-200">
+                        <GroupCard 
+                          group={group} 
+                          currentUserId={currentUserId} 
+                          onMembershipToggle={handleGroupMembershipToggle} 
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-16">
+                  <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-[#E8E6E1]">
                     <p className="text-sm text-[#706C66] mb-4">No groups available</p>
                     {currentUserId && (
                       <button
                         onClick={() => router.push('/community/create-group')}
-                        className="px-4 py-2 bg-[#4A7B61] text-white text-sm rounded-full"
+                        className="px-6 py-2.5 bg-[#4A7B61] text-white text-sm rounded-full shadow-sm hover:bg-[#3A6B51] transition-colors font-medium"
                       >
                         Create a group
                       </button>

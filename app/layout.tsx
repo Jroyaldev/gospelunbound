@@ -14,6 +14,11 @@ const inter = Inter({
 export const metadata = {
   title: 'Gospel Unbound | Exploring Modern Faith',
   description: 'Progressive Christian perspectives that bridge ancient wisdom with modern understanding through courses, resources and community.',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -28,9 +33,31 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
-      <body className="text-foreground h-full antialiased">
+      <head>
+        {/* Add a style tag to prevent FOUC */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          html {
+            visibility: visible;
+            opacity: 1;
+          }
+        `}} />
+        
+        {/* Script to handle layout before React loads */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            // Apply immediate layout fixes
+            document.documentElement.className += ' js-loaded';
+            
+            // Handle sidebar layout early
+            if (window.innerWidth >= 1024) {
+              document.body.classList.add('has-sidebar');
+            }
+          })();
+        `}} />
+      </head>
+      <body className="text-foreground h-full antialiased overflow-x-hidden">
         <AuthProvider>
-          <div className="flex h-full bg-background selection:bg-foreground/10">
+          <div className="flex h-full bg-background selection:bg-foreground/10 min-h-screen w-full">
             {/* Sidebar */}
             <Sidebar />
             

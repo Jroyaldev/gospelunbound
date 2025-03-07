@@ -1006,21 +1006,48 @@ export async function deletePostComment(
   // First get the comment to know which post to revalidate
   const { data: comment, error: fetchError } = await supabase
     .from("post_comments")
-    .select("post_id")
+    .select("post_id, user_id")
     .eq("id", commentId)
-    .eq("user_id", userId)
     .single();
 
   if (fetchError) {
     console.error("Error fetching comment:", fetchError);
     return false;
   }
+  
+  // Verify the user owns this comment
+  if (comment.user_id !== userId) {
+    console.error("User does not own this comment");
+    return false;
+  }
 
+  // Find all replies to this comment
+  const { data: replies, error: repliesError } = await supabase
+    .from("post_comments")
+    .select("id")
+    .eq("parent_id", commentId);
+
+  if (repliesError) {
+    console.error("Error fetching replies:", repliesError);
+    // Continue anyway to at least delete the original comment
+  } else if (replies && replies.length > 0) {
+    // Delete all replies
+    const { error: deleteRepliesError } = await supabase
+      .from("post_comments")
+      .delete()
+      .in("id", replies.map(reply => reply.id));
+
+    if (deleteRepliesError) {
+      console.error("Error deleting replies:", deleteRepliesError);
+      // Continue anyway to at least delete the original comment
+    }
+  }
+
+  // Delete the original comment
   const { error } = await supabase
     .from("post_comments")
     .delete()
-    .eq("id", commentId)
-    .eq("user_id", userId);
+    .eq("id", commentId);
 
   if (error) {
     console.error("Error deleting comment:", error);

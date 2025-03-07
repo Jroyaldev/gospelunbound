@@ -65,7 +65,12 @@ export default function Sidebar() {
   
   // Set mounted state after component mounts for animations
   useEffect(() => {
-    setMounted(true);
+    // Use requestAnimationFrame to ensure we update after browser paint
+    const raf = requestAnimationFrame(() => {
+      setMounted(true);
+    });
+    
+    return () => cancelAnimationFrame(raf);
   }, []);
   
   // Load user profile when user is authenticated
@@ -277,18 +282,18 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile menu button */}
-      <div className={`fixed top-4 left-4 z-50 lg:hidden transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`fixed top-6 left-4 z-50 lg:hidden transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-full p-3 text-foreground hover:bg-[#F8F7F2] hover:text-foreground focus:outline-none bg-white border border-[#F8F7F2] shadow-sm transition-all duration-300 min-h-[44px] min-w-[44px]"
+          className="inline-flex items-center justify-center rounded-full p-3.5 text-white hover:bg-[#3A6B51] focus:outline-none bg-[#4A7B61] border border-[#4A7B61] shadow-lg transition-all duration-300 min-h-[46px] min-w-[46px]"
           onClick={toggleMenu}
           aria-expanded={mobileMenuOpen}
         >
           <span className="sr-only">{mobileMenuOpen ? 'Close main menu' : 'Open main menu'}</span>
           {mobileMenuOpen ? (
-            <X className="block h-5 w-5" aria-hidden="true" strokeWidth={1.5} />
+            <X className="block h-5 w-5" aria-hidden="true" strokeWidth={2} />
           ) : (
-            <Menu className="block h-5 w-5" aria-hidden="true" strokeWidth={1.5} />
+            <Menu className="block h-5 w-5" aria-hidden="true" strokeWidth={2} />
           )}
         </button>
       </div>
@@ -317,12 +322,12 @@ export default function Sidebar() {
 
       {/* Sidebar for desktop and mobile */}
       <aside 
-        className={`fixed inset-y-0 flex w-[85%] sm:w-72 flex-col bg-white z-50 transition-all duration-300 ease-in-out lg:translate-x-0 lg:w-64 shadow-sm ${
+        className={`fixed inset-y-0 flex w-[85%] sm:w-72 flex-col bg-white z-50 transition-all duration-300 ease-in-out lg:translate-x-0 lg:w-64 shadow-sm lg:shadow-none lg:border-r lg:border-[#E8E6E1] ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } ${mounted ? 'opacity-100' : 'opacity-0'}`}
+        } ${mounted ? 'opacity-100' : 'opacity-0 lg:opacity-100'}`}
       >
         {/* Content */}
-        <div className="relative flex-1 flex flex-col border-r border-[#E8E6E1] h-full">
+        <div className="relative flex-1 flex flex-col h-full">
           {sidebarContent}
         </div>
       </aside>
