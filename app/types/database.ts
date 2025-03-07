@@ -34,12 +34,19 @@ export interface PostComment {
   id: string;
   post_id: string;
   user_id: string;
-  content: string;
+  content: string | null;
+  parent_id: string | null;
   created_at: string;
-  parent_id?: string;
-  author?: UserProfile;
-  likes?: number;
+  updated_at: string;
+  author?: {
+    id: string;
+    username?: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
+  // Client-side properties
   has_liked?: boolean;
+  likes?: number;
 }
 
 export interface CreatePostCommentRequest {

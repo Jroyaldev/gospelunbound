@@ -8,6 +8,8 @@ import { getPosts, getGroups, joinGroup, leaveGroup, togglePostLike, getProfile,
 import { Post, Group, Profile } from '@/app/lib/types';
 import { PostComment } from '@/app/types/database';
 import { Search, Heart, MessageSquare, Plus, Send, X, ChevronDown, ChevronUp, MessageCircle, Reply, MoreVertical, Trash, Users } from 'lucide-react';
+import MobileCommunityView from '../components/MobileCommunityView';
+import useIsMobile from '../hooks/useIsMobile';
 
 interface DiscussionCardProps {
   post: Post;
@@ -635,17 +637,26 @@ const CreatePostButton = ({ currentUserId }: { currentUserId: string | null }): 
 
 const CommunityPage = (): JSX.Element => {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(true);
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'discussions' | 'groups'>('discussions');
-
+  
+  // Use the custom hook instead of implementing our own
+  const isMobile = useIsMobile();
+  
+  const handleCreatePost = () => {
+    router.push('/community/create-post');
+  };
+  
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
+      setIsLoadingPosts(true);
+      setIsLoadingGroups(true);
       try {
         const supabase = await createClient();
         
@@ -731,7 +742,8 @@ const CommunityPage = (): JSX.Element => {
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
-        setIsLoading(false);
+        setIsLoadingPosts(false);
+        setIsLoadingGroups(false);
       }
     };
 
@@ -866,7 +878,7 @@ const CommunityPage = (): JSX.Element => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Implement search functionality here
-    console.log('Searching for:', searchTerm);
+    console.log('Searching for:', searchQuery);
   };
 
   const handlePostDelete = async (postId: string) => {
@@ -891,191 +903,137 @@ const CommunityPage = (): JSX.Element => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F7F2] text-[#2C2925]">
-      {/* Content */}
-      <div className="w-full px-4 md:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
-        <div className="max-w-[90rem] mx-auto">
-          {/* Header with light green background - matches resources page */}
-          <div className="relative rounded-2xl overflow-hidden mb-8 mx-4 sm:mx-6 lg:mx-8 border border-[#4A7B61]/20">
-            <div className="absolute inset-0 bg-[#4A7B61]/15"></div>
-            <div className="relative z-10 px-6 py-8 md:px-8 md:py-10">
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-[#4A7B61]/20 text-[#4A7B61] mb-4">
-                <span>Connect with our faith community</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-[#2C2925] mb-2">
-                Community
-              </h1>
-              <p className="text-sm sm:text-base text-[#706C66] max-w-md">
-                Join conversations and connect with others on similar faith journeys
-              </p>
+    <div className="min-h-screen bg-white">
+      {isMobile ? (
+        // Mobile View
+        <MobileCommunityView
+          posts={posts}
+          groups={groups}
+          currentUserId={currentUserId}
+          currentUser={currentUser}
+          isLoading={isLoadingPosts}
+          onLikeToggle={handlePostLikeToggle}
+          onGroupMembershipToggle={handleGroupMembershipToggle}
+          onCreatePost={handleCreatePost}
+          onCreateGroup={() => router.push('/community/create-group')}
+        />
+      ) : (
+        // Desktop View (existing code)
+        <div className="max-w-7xl mx-auto pt-6 pb-12">
+          <div className="flex items-center justify-between px-5 sm:px-8 lg:px-10">
+            {/* Header */}
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold text-[#2C2925]">Community</h1>
+            </div>
+            
+            {/* Search and create post */}
+            <div className="flex items-center gap-3">
+              <form onSubmit={handleSearch} className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search size={18} className="text-[#A9A6A1]" />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search discussions..."
+                  className="block w-full sm:w-[240px] py-2.5 pl-10 pr-3 border border-[#E8E6E1] rounded-full bg-white text-[#2C2925] placeholder-[#706C66] focus:border-[#4A7B61]/50 focus:outline-none focus:ring-1 focus:ring-[#4A7B61]/50 transition-all duration-200 min-h-[44px]"
+                />
+              </form>
+              
+              <CreatePostButton currentUserId={currentUserId} />
             </div>
           </div>
           
-          {/* Search and Tab Navigation */}
-          <div className="px-5 sm:px-8 lg:px-10">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-              {/* Search */}
-              <div className="w-full sm:w-auto">
-                <form onSubmit={handleSearch} className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Search size={16} strokeWidth={1.5} className="text-[#706C66]" />
-                  </div>
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search discussions..."
-                    className="block w-full sm:w-[240px] py-2.5 pl-10 pr-3 border border-[#E8E6E1] rounded-full bg-white text-[#2C2925] placeholder-[#706C66] focus:border-[#4A7B61]/50 focus:outline-none focus:ring-1 focus:ring-[#4A7B61]/50 transition-all duration-200 min-h-[44px]"
-                  />
-                </form>
-              </div>
-              
-              {/* Create Post Button - for desktop */}
-              {currentUserId && (
-                <div className="hidden sm:block">
-                  <button
-                    onClick={() => router.push('/community/create-post')}
-                    className="inline-flex items-center justify-center rounded-full bg-[#4A7B61] text-white font-medium px-4 py-2.5 text-sm transition-all duration-200 hover:bg-[#3A6B51]"
-                  >
-                    <Plus size={18} className="mr-1.5" />
-                    Start a discussion
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            {/* Tabs */}
-            <div className="flex border-b border-[#E8E6E1] mb-6">
-              <button 
+          {/* Tabs */}
+          <div className="mt-6 px-5 sm:px-8 lg:px-10">
+            <div className="flex border-b border-[#E8E6E1]">
+              <button
                 onClick={() => setActiveTab('discussions')}
-                className={`relative text-sm font-medium py-3 px-5 transition-all ${
-                  activeTab === 'discussions' 
-                    ? 'text-[#4A7B61] font-semibold' 
-                    : 'text-[#706C66] hover:text-[#4A7B61]/80'
-                }`}
+                className={`px-5 py-3 text-base font-medium border-b-2 ${
+                  activeTab === 'discussions'
+                    ? 'border-[#4A7B61] text-[#4A7B61]'
+                    : 'border-transparent text-[#706C66] hover:text-[#2C2925] hover:border-[#E8E6E1]'
+                } transition-colors`}
               >
-                <div className="flex items-center">
-                  <MessageSquare size={16} className="mr-2" />
-                  Discussions
-                </div>
-                {activeTab === 'discussions' && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#4A7B61] rounded-full"></div>
-                )}
+                Discussions
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('groups')}
-                className={`relative text-sm font-medium py-3 px-5 transition-all ${
-                  activeTab === 'groups' 
-                    ? 'text-[#4A7B61] font-semibold' 
-                    : 'text-[#706C66] hover:text-[#4A7B61]/80'
-                }`}
+                className={`px-5 py-3 text-base font-medium border-b-2 ${
+                  activeTab === 'groups'
+                    ? 'border-[#4A7B61] text-[#4A7B61]'
+                    : 'border-transparent text-[#706C66] hover:text-[#2C2925] hover:border-[#E8E6E1]'
+                } transition-colors`}
               >
-                <div className="flex items-center">
-                  <Users size={16} className="mr-2" />
-                  Groups
-                </div>
-                {activeTab === 'groups' && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#4A7B61] rounded-full"></div>
-                )}
+                Groups
               </button>
             </div>
           </div>
           
           {/* Main content */}
           <div className="px-5 sm:px-8 lg:px-10">
-            {isLoading ? (
+            {isLoadingPosts ? (
               <div className="flex justify-center items-center py-16">
                 <div className="w-8 h-8 border-2 border-[#4A7B61] border-t-transparent rounded-full animate-spin"></div>
+                <span className="ml-3 text-[#706C66]">Loading...</span>
+              </div>
+            ) : activeTab === 'discussions' ? (
+              <div className="mt-6 grid gap-6">
+                {posts.length === 0 ? (
+                  <div className="text-center py-10 bg-[#F8F7F4] rounded-lg">
+                    <h3 className="text-[#58534D] text-lg font-medium mb-2">No discussions yet</h3>
+                    <p className="text-[#706C66] mb-6">Be the first to start a conversation!</p>
+                    <button 
+                      onClick={() => router.push('/community/create-post')}
+                      className="inline-flex items-center px-4 py-2 bg-[#4A7B61] text-white rounded-lg hover:bg-[#3A6B51] transition-colors"
+                      disabled={!currentUserId}
+                    >
+                      <Plus size={18} className="mr-2" />
+                      Create Post
+                    </button>
+                  </div>
+                ) : (
+                  posts.map((post) => (
+                    <DiscussionCard 
+                      key={post.id} 
+                      post={post} 
+                      currentUserId={currentUserId}
+                      currentUser={currentUser}
+                      onLikeToggle={handlePostLikeToggle}
+                      onDeletePost={handlePostDelete}
+                    />
+                  ))
+                )}
               </div>
             ) : (
-              <>
-                {activeTab === 'discussions' && (
-                  <div>
-                    {posts.length > 0 ? (
-                      <div className="bg-white rounded-xl border border-[#E8E6E1] overflow-hidden divide-y divide-[#E8E6E1]/60">
-                        {posts.map((post) => (
-                          <div key={post.id} className="hover:bg-[#F8F7F2]/40 transition-colors duration-200">
-                            <DiscussionCard 
-                              post={post} 
-                              currentUserId={currentUserId} 
-                              currentUser={currentUser} 
-                              onLikeToggle={handlePostLikeToggle}
-                              onDeletePost={handlePostDelete}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-[#E8E6E1]">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4A7B61]/15 text-[#4A7B61] mb-4">
-                          <MessageSquare size={24} strokeWidth={1.5} />
-                        </div>
-                        <h3 className="text-lg font-medium text-[#2C2925] mb-2">No discussions yet</h3>
-                        <p className="text-[#706C66] mb-6">Be the first to start a conversation</p>
-                        {currentUserId && (
-                          <button
-                            onClick={() => router.push('/community/create-post')}
-                            className="inline-flex items-center px-4 py-2 rounded-full bg-[#4A7B61] text-white hover:bg-[#4A7B61]/90 transition-colors"
-                          >
-                            <Plus size={16} strokeWidth={1.5} className="mr-1.5" />
-                            Start a discussion
-                          </button>
-                        )}
-                      </div>
-                    )}
+              <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {groups.length === 0 ? (
+                  <div className="sm:col-span-2 lg:col-span-3 text-center py-10 bg-[#F8F7F4] rounded-lg">
+                    <h3 className="text-[#58534D] text-lg font-medium mb-2">No groups available</h3>
+                    <p className="text-[#706C66] mb-6">Create a new group or check back later!</p>
+                    <button 
+                      onClick={() => router.push('/community/create-group')}
+                      className="inline-flex items-center px-4 py-2 bg-[#4A7B61] text-white rounded-lg hover:bg-[#3A6B51] transition-colors"
+                      disabled={!currentUserId}
+                    >
+                      <Plus size={18} className="mr-2" />
+                      Create Group
+                    </button>
                   </div>
+                ) : (
+                  groups.map((group) => (
+                    <GroupCard 
+                      key={group.id} 
+                      group={group} 
+                      currentUserId={currentUserId}
+                      onMembershipToggle={handleGroupMembershipToggle}
+                    />
+                  ))
                 )}
-                
-                {activeTab === 'groups' && (
-                  <div>
-                    {groups.length > 0 ? (
-                      <div className="bg-white rounded-xl border border-[#E8E6E1] overflow-hidden divide-y divide-[#E8E6E1]/60">
-                        {groups.map((group) => (
-                          <div key={group.id} className="hover:bg-[#F8F7F2]/40 transition-colors duration-200">
-                            <GroupCard 
-                              group={group} 
-                              currentUserId={currentUserId} 
-                              onMembershipToggle={handleGroupMembershipToggle} 
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-[#E8E6E1]">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4A7B61]/15 text-[#4A7B61] mb-4">
-                          <Users size={24} strokeWidth={1.5} />
-                        </div>
-                        <h3 className="text-lg font-medium text-[#2C2925] mb-2">No groups available</h3>
-                        <p className="text-[#706C66] mb-6">Join or create a group to get started</p>
-                        {currentUserId && (
-                          <button
-                            onClick={() => router.push('/community/create-group')}
-                            className="inline-flex items-center px-4 py-2 rounded-full bg-[#4A7B61] text-white hover:bg-[#4A7B61]/90 transition-colors"
-                          >
-                            <Plus size={16} strokeWidth={1.5} className="mr-1.5" />
-                            Create a group
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
+              </div>
             )}
           </div>
-        </div>
-      </div>
-      
-      {/* Mobile floating create post button */}
-      {currentUserId && (
-        <div className="fixed right-6 bottom-6 sm:hidden">
-          <button
-            onClick={() => router.push('/community/create-post')}
-            className="flex items-center justify-center h-14 w-14 rounded-full bg-[#4A7B61] text-white shadow-lg hover:bg-[#3A6B51] transition-colors"
-            aria-label="Create a new post"
-          >
-            <Plus size={24} />
-          </button>
         </div>
       )}
     </div>
