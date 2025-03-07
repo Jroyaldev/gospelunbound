@@ -1,95 +1,395 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/app/lib/supabase/client';
-import { getPosts, getGroups, joinGroup, leaveGroup, togglePostLike, getProfile } from '@/app/lib/supabase/database';
+import { getPosts, getGroups, joinGroup, leaveGroup, togglePostLike, getProfile, getPostComments, createPostComment, toggleCommentLike } from '@/app/lib/supabase/database';
 import { Post, Group, Profile } from '@/app/lib/types';
-import { Search, Users, MessageSquare, Heart, Pin, ChevronRight, UserPlus, Settings, Bell, Plus, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { PostComment } from '@/app/types/database';
+import { Search, Heart, MessageSquare, Plus, Send, X, ChevronDown, ChevronUp, MessageCircle, Reply } from 'lucide-react';
 
 interface DiscussionCardProps {
   post: Post;
   currentUserId: string | null;
+  currentUser: Profile | null;
   onLikeToggle: (postId: string) => void;
 }
 
-const DiscussionCard = ({ post, currentUserId, onLikeToggle }: DiscussionCardProps): JSX.Element => {
-  // Format date for display
-  const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
+interface CommentItemProps {
+  comment: PostComment;
+  currentUserId: string | null;
+  onLikeToggle: (commentId: string) => void;
+  isParentComment?: boolean;
+}
+
+// Create a separate CommentItem component for better organization
+const CommentItem = ({ 
+  comment, 
+  currentUserId, 
+  onLikeToggle,
+  isParentComment = true
+}: CommentItemProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const commentContent = comment.content || '';
+  const isLongComment = commentContent.length > 200;
+  
+  const formattedDate = new Date(comment.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric'
   });
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="group bg-white rounded-2xl border border-[#E8E6E1] hover:border-[#4A7B61]/40 hover:shadow-md transition-all p-5 sm:p-6 relative hover:translate-y-[-2px]"
-    >
+    <div className={`flex items-start gap-2 p-2 rounded-md transition-colors ${isParentComment ? 'hover:bg-[#F8F7F2]' : 'ml-8 mt-2 border-l-2 border-[#E8E6E1] pl-3'}`}>
+      <img
+        src={comment.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(comment.author?.full_name || 'User')}
+        alt={comment.author?.full_name || 'User'}
+        className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-1"
+      />
+      <div className="flex-1">
+        <div className="flex justify-between items-center">
+          <span className="text-xs font-medium text-[#2C2925]">{comment.author?.full_name || 'Anonymous'}</span>
+          <span className="text-xs text-[#706C66]">{formattedDate}</span>
+        </div>
+        <div className="text-sm text-[#706C66] whitespace-pre-wrap mt-1">
+          {isLongComment && !isExpanded
+            ? `${commentContent.substring(0, 200)}...` 
+            : commentContent}
+            
+          {isLongComment && (
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="ml-1 text-[#6B8068] hover:text-[#4A7B61] font-medium text-xs"
+            >
+              {isExpanded ? 'Show less' : 'Read more'}
+            </button>
+          )}
+        </div>
+        <div className="flex items-center mt-1.5 gap-3">
+          <button 
+            onClick={() => currentUserId && onLikeToggle(comment.id)}
+            disabled={!currentUserId}
+            className="flex items-center text-xs text-[#706C66] hover:text-[#4A7B61] transition-colors"
+          >
+            <Heart 
+              size={12} 
+              className={`mr-1 ${comment.has_liked ? "text-[#E74C3C] fill-[#E74C3C]" : ""}`}
+            />
+            {comment.likes || 0} {comment.likes === 1 ? 'like' : 'likes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle }: DiscussionCardProps): JSX.Element => {
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [commentCount, setCommentCount] = useState(post.comments || 0);
+  const [hasMoreComments, setHasMoreComments] = useState(false);
+  const commentsContainerRef = useRef<HTMLDivElement>(null);
+  
+  const formattedDate = new Date(post.created_at).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  });
+  
+  // Check if comments container has scrollable content
+  const checkForMoreComments = useCallback(() => {
+    if (commentsContainerRef.current) {
+      const { scrollHeight, clientHeight, scrollTop } = commentsContainerRef.current;
+      
+      // Check if there's more content than visible area
+      const hasMoreContent = scrollHeight > clientHeight;
+      
+      // Check if user has scrolled to the bottom
+      const isScrolledToBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px threshold
+      
+      // Only show the indicator if there's more content AND user hasn't scrolled to bottom
+      setHasMoreComments(hasMoreContent && !isScrolledToBottom);
+    }
+  }, []);
+  
+  // Add resize observer to check for scrollable content
+  useEffect(() => {
+    if (showComments) {
+      checkForMoreComments();
+      
+      const resizeObserver = new ResizeObserver(() => {
+        checkForMoreComments();
+      });
+      
+      if (commentsContainerRef.current) {
+        resizeObserver.observe(commentsContainerRef.current);
+      }
+      
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }
+  }, [showComments, comments, checkForMoreComments]);
+  
+  const toggleComments = async () => {
+    if (showComments) {
+      setShowComments(false);
+      return;
+    }
+    
+    setIsLoadingComments(true);
+    setShowComments(true);
+    
+    try {
+      const commentsData = await getPostComments(post.id);
+      
+      // If user is logged in, check if they've liked each comment
+      if (currentUserId) {
+        const supabase = await createClient();
+        
+        const commentsWithLikeStatus = await Promise.all(
+          commentsData.map(async (comment) => {
+            try {
+              const { data, error } = await supabase
+                .from('comment_likes')
+                .select('id')
+                .eq('user_id', currentUserId)
+                .eq('comment_id', comment.id)
+                .maybeSingle();
+              
+              if (error) {
+                console.error('Error checking comment like status:', error);
+                return { ...comment, has_liked: false };
+              }
+              
+              return {
+                ...comment,
+                has_liked: !!data
+              };
+            } catch (err) {
+              console.error('Error checking comment like status:', err);
+              return { ...comment, has_liked: false };
+            }
+          })
+        );
+        
+        setComments(commentsWithLikeStatus);
+      } else {
+        setComments(commentsData);
+      }
+      
+      setCommentCount(commentsData.length);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+  
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUserId || !commentText.trim()) return;
+    
+    try {
+      const newComment = await createPostComment(currentUserId, {
+        post_id: post.id,
+        content: commentText.trim()
+      });
+      
+      if (newComment) {
+        // Add has_liked = false as this is a new comment
+        const commentWithAuthor = {
+          ...newComment,
+          has_liked: false,
+          likes: 0,
+          author: newComment.author || {
+            id: currentUserId,
+            username: currentUser?.username,
+            full_name: currentUser?.full_name || 'User',
+            avatar_url: currentUser?.avatar_url,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        };
+        
+        setComments(prev => [...prev, commentWithAuthor]);
+        setCommentText('');
+        setCommentCount(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error creating comment:', error);
+    }
+  };
+  
+  const handleCommentLikeToggle = async (commentId: string) => {
+    if (!currentUserId) return;
+    
+    // Optimistically update UI
+    setComments(comments.map(comment => {
+      if (comment.id === commentId) {
+        const newLikeStatus = !comment.has_liked;
+        return {
+          ...comment,
+          has_liked: newLikeStatus,
+          likes: (comment.likes || 0) + (newLikeStatus ? 1 : -1)
+        };
+      }
+      return comment;
+    }));
+    
+    // Update in database
+    try {
+      await toggleCommentLike(currentUserId, commentId);
+    } catch (error) {
+      console.error('Error toggling comment like:', error);
+      // Could revert the optimistic update here if needed
+    }
+  };
+
+  return (
+    <div className="py-5 border-b border-[#E8E6E1]/60">
       <div className="flex items-start gap-3">
         <img
           src={post.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.full_name || 'User')}
           alt={post.author?.full_name || 'User'}
-          className="w-9 h-9 rounded-full object-cover"
+          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
         />
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium text-[#2C2925]">{post.author?.full_name || 'Anonymous'}</span>
+            <span className="text-sm font-medium text-[#2C2925]">{post.author?.full_name || 'Anonymous'}{post.author?.username === 'jonny' && ' (2)'}</span>
             <span className="text-xs text-[#706C66]">{formattedDate}</span>
           </div>
           
-          <h3 className="text-base font-medium text-[#2C2925] mb-1 group-hover:text-[#4A7B61] transition-colors">
+          <h3 className="text-base font-medium text-[#2C2925] mb-1.5">
             {post.title}
           </h3>
           
-          <p className="text-sm text-[#706C66] mb-3 line-clamp-2">
-            {post.content.length > 120 ? `${post.content.substring(0, 120)}...` : post.content}
-          </p>
+          {post.content && (
+            <p className="text-sm text-[#706C66] mb-3">
+              {post.content}
+            </p>
+          )}
           
-          <div className="flex items-center text-xs text-[#706C66] gap-3">
+          <div className="flex items-center space-x-5 mt-1">
             {post.category && (
-              <div className="flex items-center gap-1">
-                <Pin size={14} strokeWidth={1.5} className="text-[#706C66]" />
-                <span>{post.category}</span>
-              </div>
+              <span className="text-sm text-[#706C66]">{post.category}</span>
             )}
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center ml-auto">
               <button 
-                onClick={(e) => {
-                  e.preventDefault();
+                onClick={() => {
                   if (currentUserId) {
                     onLikeToggle(post.id);
                   }
                 }}
-                className={`flex items-center gap-1 ${currentUserId ? 'hover:text-[#E74C3C] cursor-pointer' : 'cursor-default'}`}
+                className="flex items-center mr-4"
               >
                 <Heart 
-                  size={14} 
-                  strokeWidth={1.5} 
-                  className="text-[#706C66]" 
-                  fill={post.has_liked ? "#E74C3C" : "none"}
-                  color={post.has_liked ? "#E74C3C" : undefined}
+                  size={16} 
+                  className={`${post.has_liked ? "text-[#E74C3C] fill-[#E74C3C]" : "text-[#706C66]"}`}
                 />
-                <span>{post.likes || 0}</span>
+                <span className="text-xs ml-1 text-[#706C66]">{post.likes || 0}</span>
               </button>
               
-              <div className="flex items-center gap-1">
-                <MessageSquare size={14} strokeWidth={1.5} className="text-[#706C66]" />
-                <span>{post.comments || 0}</span>
-              </div>
+              <button 
+                onClick={toggleComments}
+                className="flex items-center"
+              >
+                <MessageSquare size={16} className="text-[#706C66]" />
+                <span className="text-xs ml-1 text-[#706C66]">{commentCount}</span>
+                {showComments ? (
+                  <ChevronUp size={16} className="ml-1 text-[#706C66]" />
+                ) : (
+                  <ChevronDown size={16} className="ml-1 text-[#706C66]" />
+                )}
+              </button>
             </div>
           </div>
           
-          <Link href={`/community/discussions/${post.id}`} className="absolute inset-0">
-            <span className="sr-only">View discussion: {post.title}</span>
-          </Link>
+          {/* Comments section */}
+          {showComments && (
+            <div className="mt-4 pl-2 border-l-2 border-[#E8E6E1] animate-fadeIn">
+              {isLoadingComments ? (
+                <div className="py-3 text-center">
+                  <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#6B8068] border-t-transparent"></div>
+                  <span className="ml-2 text-sm text-[#706C66]">Loading comments...</span>
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="py-3 text-center text-sm text-[#706C66]">
+                  No comments yet. Be the first to comment!
+                </div>
+              ) : (
+                <div className="relative">
+                  <div 
+                    ref={commentsContainerRef}
+                    className="space-y-4 mb-4 max-h-[400px] overflow-y-auto pr-2 comments-container"
+                    onScroll={checkForMoreComments}
+                  >
+                    {comments.map((comment) => (
+                      <CommentItem 
+                        key={comment.id} 
+                        comment={comment} 
+                        currentUserId={currentUserId} 
+                        onLikeToggle={handleCommentLikeToggle}
+                      />
+                    ))}
+                  </div>
+                  {hasMoreComments && (
+                    <>
+                      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#FFFFFF] to-transparent pointer-events-none" aria-hidden="true"></div>
+                      <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none" aria-hidden="true">
+                        <div className="px-2 py-1 bg-[#F5F4F2] rounded-full text-xs text-[#706C66] shadow-sm">
+                          Scroll for more
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              
+              {/* Add comment form */}
+              {currentUserId ? (
+                <form onSubmit={handleSubmitComment} className="mt-4 mb-1">
+                  <div className="flex items-start gap-2">
+                    <img
+                      src={currentUser?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser?.full_name || 'User')}
+                      alt={currentUser?.full_name || 'User'}
+                      className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-1"
+                    />
+                    <div className="flex-1 relative">
+                      <textarea
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="w-full border border-[#E8E6E1] rounded-lg p-2 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-[#6B8068] resize-none min-h-[60px]"
+                        autoFocus
+                      ></textarea>
+                      <button
+                        type="submit"
+                        disabled={!commentText.trim()}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#6B8068] hover:text-[#4A7B61] transition-colors disabled:text-[#A9A6A1] disabled:cursor-not-allowed"
+                        aria-label="Send comment"
+                        title="Send comment"
+                      >
+                        <Send size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <div className="mt-3 mb-1 p-2 bg-[#F5F4F2] rounded-lg text-center text-sm">
+                  <Link href="/auth/signin" className="text-[#6B8068] font-medium hover:underline">
+                    Sign in to add a comment
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -100,77 +400,37 @@ interface GroupCardProps {
 }
 
 const GroupCard = ({ group, currentUserId, onMembershipToggle }: GroupCardProps): JSX.Element => {
-  // Create a set of mock user avatars since we don't have actual member avatars yet
-  const avatarPlaceholders = [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150'
-  ];
-  
-  // Use the first few avatars depending on group size
   const membersCount = group.members || 0;
-  const avatarsToShow = avatarPlaceholders.slice(0, Math.min(3, Math.floor(membersCount / 50) + 1));
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="group bg-white rounded-2xl border border-[#E8E6E1] hover:border-[#4A7B61]/40 hover:shadow-md transition-all p-5 sm:p-6 relative hover:translate-y-[-2px]"
-    >
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#F8F7F2]/50 flex items-center justify-center">
-          <Users size={20} strokeWidth={1.5} className="text-[#2C2925]" />
+    <div className="py-5 border-b border-[#E8E6E1]/60 relative">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-base font-medium text-[#2C2925] mb-1">{group.name}</h3>
+          <p className="text-sm text-[#706C66]">{membersCount} {membersCount === 1 ? 'member' : 'members'}</p>
         </div>
         
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="text-base font-medium text-[#2C2925] group-hover:text-[#4A7B61] transition-colors">
-              {group.name}
-            </h3>
-            <span className="text-xs text-[#706C66]">{membersCount} members</span>
-          </div>
-          
-          <p className="text-sm text-[#706C66] mb-3 line-clamp-2">
-            {group.description}
-          </p>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex -space-x-2">
-              {avatarsToShow.map((avatar, i) => (
-                <img 
-                  key={i}
-                  src={avatar}
-                  alt="Member"
-                  className="w-6 h-6 rounded-full border-2 border-[#F8F7F2] object-cover"
-                />
-              ))}
-            </div>
-            
-            {currentUserId && (
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  onMembershipToggle(group.id, !!group.is_member);
-                }}
-                className={`text-xs font-medium flex items-center ${group.is_member ? 'text-red-500' : 'text-[#4A7B61]'}`}
-              >
-                <UserPlus 
-                  size={14} 
-                  strokeWidth={1.5} 
-                  className={`mr-1 ${group.is_member ? 'text-red-500' : 'text-[#4A7B61]'}`} 
-                />
-                {group.is_member ? 'Leave group' : 'Join group'}
-              </button>
-            )}
-          </div>
-          
-          <Link href={`/community/groups/${group.id}`} className="absolute inset-0">
-            <span className="sr-only">View group: {group.name}</span>
-          </Link>
-        </div>
+        {currentUserId && (
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              onMembershipToggle(group.id, !!group.is_member);
+            }}
+            className={`text-xs font-medium px-3 py-1 rounded-full border ${
+              group.is_member 
+                ? 'border-red-300 text-red-500 hover:bg-red-50' 
+                : 'border-[#4A7B61]/30 text-[#4A7B61] hover:bg-[#4A7B61]/10'
+            }`}
+          >
+            {group.is_member ? 'Leave' : 'Join'}
+          </button>
+        )}
       </div>
-    </motion.div>
+      
+      <Link href={`/community/groups/${group.id}`} className="absolute inset-0">
+        <span className="sr-only">View group: {group.name}</span>
+      </Link>
+    </div>
   );
 };
 
@@ -182,10 +442,10 @@ const CreatePostButton = ({ currentUserId }: { currentUserId: string | null }): 
   return (
     <button 
       onClick={() => router.push('/community/create-post')}
-      className="fixed bottom-6 right-6 flex items-center justify-center gap-2 bg-[#4A7B61] text-white rounded-full p-4 shadow-lg hover:bg-[#3A6B51] transition-colors z-10"
+      className="fixed bottom-6 right-6 flex items-center justify-center bg-[#4A7B61] text-white rounded-full w-12 h-12 shadow-md hover:bg-[#3A6B51] transition-colors z-10"
+      aria-label="Create Post"
     >
-      <Plus size={20} strokeWidth={1.5} className="text-white" />
-      <span className="hidden sm:inline-block">Create Post</span>
+      <Plus size={20} />
     </button>
   );
 };
@@ -198,6 +458,7 @@ const CommunityPage = (): JSX.Element => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'discussions' | 'groups'>('discussions');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -217,23 +478,33 @@ const CommunityPage = (): JSX.Element => {
         }
         
         // Fetch posts and check if current user liked them
-        const postsData = await getPosts(4);
+        const postsData = await getPosts(20);
         console.log('Posts data returned from getPosts:', postsData);
         if (userId) {
           const postsWithLikeStatus = await Promise.all(
             postsData.map(async (post) => {
               // Check if current user has liked this post
-              const { data } = await supabase
-                .from('post_likes')
-                .select('id')
-                .eq('user_id', userId)
-                .eq('post_id', post.id)
-                .single();
-              
-              return {
-                ...post,
-                has_liked: !!data
-              };
+              try {
+                const { data, error } = await supabase
+                  .from('post_likes')
+                  .select('id')
+                  .eq('user_id', userId)
+                  .eq('post_id', post.id)
+                  .maybeSingle();
+                
+                if (error) {
+                  console.error('Error checking like status:', error);
+                  return { ...post, has_liked: false };
+                }
+                
+                return {
+                  ...post,
+                  has_liked: !!data
+                };
+              } catch (err) {
+                console.error('Error checking post like status:', err);
+                return { ...post, has_liked: false };
+              }
             })
           );
           setPosts(postsWithLikeStatus);
@@ -242,22 +513,32 @@ const CommunityPage = (): JSX.Element => {
         }
         
         // Fetch groups and check if current user is a member
-        const groupsData = await getGroups(4);
+        const groupsData = await getGroups(8);
         if (userId) {
           const groupsWithMemberStatus = await Promise.all(
             groupsData.map(async (group) => {
               // Check if current user is a member of this group
-              const { data } = await supabase
-                .from('group_members')
-                .select('id')
-                .eq('user_id', userId)
-                .eq('group_id', group.id)
-                .single();
-              
-              return {
-                ...group,
-                is_member: !!data
-              };
+              try {
+                const { data, error } = await supabase
+                  .from('group_members')
+                  .select('id')
+                  .eq('user_id', userId)
+                  .eq('group_id', group.id)
+                  .maybeSingle();
+                
+                if (error) {
+                  console.error('Error checking membership status:', error);
+                  return { ...group, is_member: false };
+                }
+                
+                return {
+                  ...group,
+                  is_member: !!data
+                };
+              } catch (err) {
+                console.error('Error checking group membership status:', err);
+                return { ...group, is_member: false };
+              }
             })
           );
           setGroups(groupsWithMemberStatus);
@@ -265,62 +546,58 @@ const CommunityPage = (): JSX.Element => {
           setGroups(groupsData);
         }
       } catch (error) {
-        console.error('Error fetching community data:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
-  
+
   const handlePostLikeToggle = async (postId: string) => {
     if (!currentUserId) return;
     
+    // Optimistically update UI
+    setPosts(posts.map(post => {
+      if (post.id === postId) {
+        const newLikeStatus = !post.has_liked;
+        return {
+          ...post,
+          has_liked: newLikeStatus,
+          likes: (post.likes || 0) + (newLikeStatus ? 1 : -1)
+        };
+      }
+      return post;
+    }));
+    
+    // Update in database
     try {
-      // Optimistically update UI
-      setPosts((prevPosts) => 
-        prevPosts.map(post => {
-          if (post.id === postId) {
-            const newLikeStatus = !post.has_liked;
-            return {
-              ...post,
-              has_liked: newLikeStatus,
-              likes: (post.likes || 0) + (newLikeStatus ? 1 : -1)
-            };
-          }
-          return post;
-        })
-      );
-      
-      // Update on backend
       await togglePostLike(currentUserId, postId);
     } catch (error) {
-      console.error('Error toggling like:', error);
+      console.error('Error toggling post like:', error);
       // Revert optimistic update on error
-      fetchPosts();
+      await fetchPosts();
     }
   };
-  
+
   const handleGroupMembershipToggle = async (groupId: string, isMember: boolean) => {
     if (!currentUserId) return;
     
+    // Optimistically update UI
+    setGroups(groups.map(group => {
+      if (group.id === groupId) {
+        return {
+          ...group,
+          is_member: !isMember,
+          members: (group.members || 0) + (isMember ? -1 : 1)
+        };
+      }
+      return group;
+    }));
+    
+    // Update in database
     try {
-      // Optimistically update UI
-      setGroups((prevGroups) => 
-        prevGroups.map(group => {
-          if (group.id === groupId) {
-            return {
-              ...group,
-              is_member: !isMember,
-              members: (group.members || 0) + (isMember ? -1 : 1)
-            };
-          }
-          return group;
-        })
-      );
-      
-      // Update on backend
       if (isMember) {
         await leaveGroup(currentUserId, groupId);
       } else {
@@ -329,261 +606,200 @@ const CommunityPage = (): JSX.Element => {
     } catch (error) {
       console.error('Error toggling group membership:', error);
       // Revert optimistic update on error
-      fetchGroups();
-    }
-  };
-  
-  const fetchPosts = async () => {
-    try {
-      const postsData = await getPosts(4);
-      console.log('Posts data returned from getPosts:', postsData);
-      
-      if (currentUserId) {
-        const supabase = await createClient();
-        const postsWithLikeStatus = await Promise.all(
-          postsData.map(async (post) => {
-            const { data } = await supabase
-              .from('post_likes')
-              .select('id')
-              .eq('user_id', currentUserId)
-              .eq('post_id', post.id)
-              .single();
-            
-            return {
-              ...post,
-              has_liked: !!data
-            };
-          })
-        );
-        setPosts(postsWithLikeStatus);
-      } else {
-        setPosts(postsData);
-      }
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-    }
-  };
-  
-  const fetchGroups = async () => {
-    try {
-      const groupsData = await getGroups(4);
-      if (currentUserId) {
-        const supabase = await createClient();
-        const groupsWithMemberStatus = await Promise.all(
-          groupsData.map(async (group) => {
-            const { data } = await supabase
-              .from('group_members')
-              .select('id')
-              .eq('user_id', currentUserId)
-              .eq('group_id', group.id)
-              .single();
-            
-            return {
-              ...group,
-              is_member: !!data
-            };
-          })
-        );
-        setGroups(groupsWithMemberStatus);
-      } else {
-        setGroups(groupsData);
-      }
-    } catch (error) {
-      console.error('Error fetching groups:', error);
-    }
-  };
-  
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      router.push(`/community/search?q=${encodeURIComponent(searchTerm)}`);
+      await fetchGroups();
     }
   };
 
-  return (
-    <main className="min-h-screen bg-[#F8F7F2] text-[#2C2925]">
-      <div className="w-full px-4 md:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
-        <div className="max-w-[90rem] mx-auto">
-          {/* Header */}
-          <div className="relative rounded-xl overflow-hidden mb-8 mx-4 sm:mx-6 lg:mx-8">
-            <div className="absolute inset-0 bg-[#F5F0E8] opacity-70"></div>
-            <div className="relative z-10 px-6 py-10 md:px-8 md:py-12">
-              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-[#2C2925] mb-2">Community</h1>
-              <p className="text-sm sm:text-base text-[#706C66] max-w-md">
-                Connect with others and engage in meaningful discussions about progressive Christianity
-              </p>
-            </div>
-          </div>
+  const fetchPosts = async () => {
+    if (!currentUserId) return;
+    
+    const postsData = await getPosts(20);
+    const supabase = await createClient();
+    
+    const postsWithLikeStatus = await Promise.all(
+      postsData.map(async (post) => {
+        try {
+          const { data, error } = await supabase
+            .from('post_likes')
+            .select('id')
+            .eq('user_id', currentUserId)
+            .eq('post_id', post.id)
+            .maybeSingle();
           
-          {/* Main content area */}
-          <div className="px-4 sm:px-6 lg:px-8">
-            {/* User banner */}
-            {currentUser ? (
-              <div className="bg-white border border-[#E8E6E1] rounded-2xl p-5 sm:p-6 mb-8">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name || '')}`}
-                      alt={currentUser.full_name || ''}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                    <div>
-                      <p className="text-[#2C2925] font-medium">{currentUser.full_name || currentUser.username}</p>
-                      <p className="text-sm text-[#706C66]">Member</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <Link 
-                      href="/community/notifications"
-                      className="flex items-center justify-center gap-1 min-h-[44px] p-3 sm:px-4 bg-white border border-[#E8E6E1] rounded-full text-[#2C2925] hover:bg-[#F5F0E8]/50 transition-all"
-                    >
-                      <Bell size={16} strokeWidth={1.5} className="text-[#706C66]" />
-                      <span className="hidden sm:inline-block">Notifications</span>
-                    </Link>
-                    <Link 
-                      href="/profile"
-                      className="flex items-center justify-center gap-1 min-h-[44px] p-3 sm:px-4 bg-white border border-[#E8E6E1] rounded-full text-[#2C2925] hover:bg-[#F5F0E8]/50 transition-all"
-                    >
-                      <Settings size={16} strokeWidth={1.5} className="text-[#706C66]" />
-                      <span className="hidden sm:inline-block">Settings</span>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white border border-[#E8E6E1] rounded-2xl p-5 sm:p-6 mb-8">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <p className="text-[#706C66]">Sign in to participate in discussions and join groups</p>
-                  <Link
-                    href="/auth/signin"
-                    className="inline-flex items-center justify-center min-h-[44px] px-4 py-2 bg-[#4A7B61] text-white rounded-full font-medium hover:bg-[#4A7B61]/90 transition-colors"
-                  >
-                    Sign In
-                  </Link>
-                </div>
-              </div>
-            )}
-            
-            {/* Search bar */}
-            <form onSubmit={handleSearch} className="relative w-full max-w-md mb-10">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Search size={16} strokeWidth={1.5} className="text-[#706C66]" />
-              </div>
+          if (error) {
+            console.error('Error checking like status:', error);
+            return { ...post, has_liked: false };
+          }
+          
+          return {
+            ...post,
+            has_liked: !!data
+          };
+        } catch (err) {
+          console.error('Error checking post like status:', err);
+          return { ...post, has_liked: false };
+        }
+      })
+    );
+    
+    setPosts(postsWithLikeStatus);
+  };
+
+  const fetchGroups = async () => {
+    if (!currentUserId) return;
+    
+    const groupsData = await getGroups(8);
+    const supabase = await createClient();
+    
+    const groupsWithMemberStatus = await Promise.all(
+      groupsData.map(async (group) => {
+        try {
+          const { data, error } = await supabase
+            .from('group_members')
+            .select('id')
+            .eq('user_id', currentUserId)
+            .eq('group_id', group.id)
+            .maybeSingle();
+          
+          if (error) {
+            console.error('Error checking membership status:', error);
+            return { ...group, is_member: false };
+          }
+          
+          return {
+            ...group,
+            is_member: !!data
+          };
+        } catch (err) {
+          console.error('Error checking group membership status:', err);
+          return { ...group, is_member: false };
+        }
+      })
+    );
+    
+    setGroups(groupsWithMemberStatus);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Implement search functionality here
+    console.log('Searching for:', searchTerm);
+  };
+
+  return (
+    <div className="bg-white min-h-screen">
+      <div className="max-w-[780px] mx-auto px-4">
+        <div className="flex items-center justify-between py-6">
+          <h1 className="text-xl font-medium text-[#2C2925]">Community</h1>
+          
+          <div className="relative">
+            <form onSubmit={handleSearch} className="relative">
               <input
+                type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search discussions and groups..."
-                className="block w-full min-h-[44px] py-2.5 pl-10 pr-3 border border-[#E8E6E1] rounded-full bg-white text-[#2C2925] placeholder-[#706C66] focus:border-[#4A7B61] focus:ring-[#4A7B61] transition-all duration-200"
+                placeholder="Search"
+                className="w-[220px] pl-9 pr-4 py-2 bg-[#F8F7F2] rounded-md text-sm focus:outline-none"
               />
+              <Search size={15} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#706C66]" />
+              <button type="submit" className="sr-only">Search</button>
             </form>
-            
-            {/* Loading state */}
-            {isLoading ? (
-              <div className="flex justify-center items-center py-16">
-                <Loader2 size={32} className="animate-spin text-[#4A7B61]" />
-              </div>
-            ) : (
-              <>
-                {/* Recent Discussions */}
-                <div className="mb-12">
-                  <div className="flex justify-between items-end mb-5">
-                    <h2 className="text-xl font-medium text-[#2C2925]">Recent Discussions</h2>
-                    <Link 
-                      href="/community/discussions"
-                      className="text-sm text-[#4A7B61] flex items-center gap-1 hover:underline underline-offset-4"
-                    >
-                      View all
-                      <ChevronRight size={14} strokeWidth={1.5} className="ml-1 text-[#4A7B61]" />
-                    </Link>
-                  </div>
-                  
-                  {posts.length === 0 ? (
-                    <div className="bg-white rounded-2xl border border-[#E8E6E1] p-8 text-center">
-                      <p className="text-[#706C66] mb-4">No discussions yet</p>
-                      {currentUserId && (
-                        <button
-                          onClick={() => router.push('/community/create-post')}
-                          className="inline-flex items-center justify-center gap-2 py-2 px-4 bg-[#4A7B61] text-white rounded-full hover:bg-[#3A6B51] transition-colors"
-                        >
-                          <Plus size={16} strokeWidth={1.5} />
-                          Start a Discussion
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                      {posts.map((post) => (
-                        <DiscussionCard 
-                          key={post.id} 
-                          post={post} 
-                          currentUserId={currentUserId}
-                          onLikeToggle={handlePostLikeToggle}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-                
-                {/* Groups You Might Like */}
-                <div>
-                  <div className="flex justify-between items-end mb-5">
-                    <h2 className="text-xl font-medium text-[#2C2925]">Groups You Might Like</h2>
-                    <Link 
-                      href="/community/groups"
-                      className="text-sm text-[#4A7B61] flex items-center gap-1 hover:underline underline-offset-4"
-                    >
-                      View all
-                      <ChevronRight size={14} strokeWidth={1.5} className="ml-1 text-[#4A7B61]" />
-                    </Link>
-                  </div>
-                  
-                  {groups.length === 0 ? (
-                    <div className="bg-white rounded-2xl border border-[#E8E6E1] p-8 text-center">
-                      <p className="text-[#706C66] mb-4">No groups available</p>
-                      {currentUserId && (
-                        <button
-                          onClick={() => router.push('/community/create-group')}
-                          className="inline-flex items-center justify-center gap-2 py-2 px-4 bg-[#4A7B61] text-white rounded-full hover:bg-[#3A6B51] transition-colors"
-                        >
-                          <Plus size={16} strokeWidth={1.5} />
-                          Create a Group
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                      {groups.map((group) => (
-                        <GroupCard 
-                          key={group.id} 
-                          group={group} 
-                          currentUserId={currentUserId}
-                          onMembershipToggle={handleGroupMembershipToggle}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  
-                  {currentUserId && (
-                    <div className="mt-8 text-center">
-                      <button 
-                        onClick={() => router.push('/community/create-group')}
-                        className="flex items-center justify-center gap-2 min-h-[44px] py-2.5 px-6 mx-auto bg-[#4A7B61] text-white rounded-full font-medium hover:bg-[#4A7B61]/90 transition-colors"
-                      >
-                        <Plus size={16} strokeWidth={1.5} className="text-white" />
-                        Create a New Group
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
           </div>
         </div>
+        
+        <div className="flex border-b border-[#4A7B61]/20 mb-4">
+          <button 
+            onClick={() => setActiveTab('discussions')}
+            className={`text-sm font-medium py-2 px-8 transition-colors border-b-2 ${
+              activeTab === 'discussions' 
+                ? 'text-[#4A7B61] border-[#4A7B61]' 
+                : 'text-[#706C66] border-transparent'
+            }`}
+          >
+            Discussions
+          </button>
+          <button 
+            onClick={() => setActiveTab('groups')}
+            className={`text-sm font-medium py-2 px-8 transition-colors border-b-2 ${
+              activeTab === 'groups' 
+                ? 'text-[#4A7B61] border-[#4A7B61]' 
+                : 'text-[#706C66] border-transparent'
+            }`}
+          >
+            Groups
+          </button>
+        </div>
+        
+        {isLoading ? (
+          <div className="flex justify-center items-center py-16">
+            <div className="w-8 h-8 border-2 border-[#4A7B61] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'discussions' && (
+              <div>
+                {posts.length > 0 ? (
+                  <div>
+                    {posts.map((post) => (
+                      <DiscussionCard 
+                        key={post.id} 
+                        post={post} 
+                        currentUserId={currentUserId} 
+                        currentUser={currentUser} 
+                        onLikeToggle={handlePostLikeToggle} 
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <p className="text-sm text-[#706C66] mb-4">No discussions yet</p>
+                    {currentUserId && (
+                      <button
+                        onClick={() => router.push('/community/create-post')}
+                        className="px-4 py-2 bg-[#4A7B61] text-white text-sm rounded-full"
+                      >
+                        Start a discussion
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {activeTab === 'groups' && (
+              <div>
+                {groups.length > 0 ? (
+                  <div>
+                    {groups.map((group) => (
+                      <GroupCard 
+                        key={group.id} 
+                        group={group} 
+                        currentUserId={currentUserId} 
+                        onMembershipToggle={handleGroupMembershipToggle} 
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <p className="text-sm text-[#706C66] mb-4">No groups available</p>
+                    {currentUserId && (
+                      <button
+                        onClick={() => router.push('/community/create-group')}
+                        className="px-4 py-2 bg-[#4A7B61] text-white text-sm rounded-full"
+                      >
+                        Create a group
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
       
       <CreatePostButton currentUserId={currentUserId} />
-    </main>
+    </div>
   );
 };
 

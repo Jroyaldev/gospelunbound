@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom scrollbar styles */
+.comments-container {
+  scrollbar-width: thin;
+  scrollbar-color: #E8E6E1 transparent;
+}
+
+.comments-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.comments-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.comments-container::-webkit-scrollbar-thumb {
+  background-color: #E8E6E1;
+  border-radius: 20px;
+}
+
 :root {
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   

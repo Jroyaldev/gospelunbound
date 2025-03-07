@@ -14,6 +14,11 @@ const inter = Inter({
 export const metadata = {
   title: 'Gospel Unbound | Exploring Modern Faith',
   description: 'Progressive Christian perspectives that bridge ancient wisdom with modern understanding through courses, resources and community.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -23,9 +28,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-      </head>
       <body className="text-foreground h-full antialiased">
         <AuthProvider>
           <div className="flex h-full bg-background selection:bg-foreground/10">
