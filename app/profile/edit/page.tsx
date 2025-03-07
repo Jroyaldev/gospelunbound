@@ -226,7 +226,7 @@ export default function EditProfilePage() {
     if (!avatarFile || !user?.id) return null;
     
     try {
-      const supabase = createClient();
+      const supabase = await createClient();
       const fileExt = avatarFile.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       

@@ -6,7 +6,7 @@ import { createClient } from './client'
  */
 export async function testSupabaseConnection() {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     
     // Test authentication connection
     const { data: { session }, error: authError } = await supabase.auth.getSession()
@@ -47,7 +47,7 @@ export async function testSupabaseConnection() {
  */
 export async function testProfileUpdate(userId: string) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     
     // Get current profile
     const { data: currentProfile, error: getError } = await supabase

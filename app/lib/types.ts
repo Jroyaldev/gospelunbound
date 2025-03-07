@@ -92,6 +92,72 @@ export type UserEngagement = {
   total_time_spent_minutes: number;
 };
 
+// Community types
+
+export type Post = {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  category: string | null;
+  image_url: string | null;
+  is_pinned: boolean;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  // Client-side properties
+  author?: Profile;
+  likes?: number;
+  comments?: number;
+  has_liked?: boolean;
+};
+
+export type PostComment = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  parent_id: string | null;
+  created_at: string;
+  updated_at: string;
+  // Client-side properties
+  author?: Profile;
+  replies?: PostComment[];
+};
+
+export type PostLike = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+};
+
+export type Group = {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string | null;
+  category: string | null;
+  created_by_user_id: string;
+  is_private: boolean;
+  topics: string[];
+  created_at: string;
+  updated_at: string;
+  // Client-side properties
+  creator?: Profile;
+  members?: number;
+  is_member?: boolean;
+};
+
+export type GroupMember = {
+  id: string;
+  group_id: string;
+  user_id: string;
+  role: 'admin' | 'moderator' | 'member';
+  joined_at: string;
+  user?: Profile;
+};
+
 // Expanded types with related data
 
 export type CourseWithProgress = Course & {
@@ -124,6 +190,32 @@ export type UpdateLessonProgressRequest = {
   lesson_id: string;
   course_id: string;
   is_completed: boolean;
+};
+
+// Community request types
+
+export type CreatePostRequest = {
+  title: string;
+  content: string;
+  category?: string;
+  image_url?: string;
+  is_pinned?: boolean;
+  tags?: string[] | string;
+};
+
+export type CreatePostCommentRequest = {
+  post_id: string;
+  content: string;
+  parent_id?: string;
+};
+
+export type CreateGroupRequest = {
+  name: string;
+  description: string;
+  image_url?: string;
+  category?: string;
+  is_private?: boolean;
+  topics?: string[] | string;
 };
 
 // Analytics types

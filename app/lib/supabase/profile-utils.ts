@@ -6,7 +6,7 @@ export async function fetchUserProfile(userId: string): Promise<Profile | null> 
   if (!userId) return null;
   
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from('profiles')
       .select('*')

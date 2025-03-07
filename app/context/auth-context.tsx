@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   signIn: async () => ({ success: false }),
   signUp: async () => ({ success: false })
-})
+}) as React.Context<AuthContextType>;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Ensure a user profile exists for the authenticated user
   const ensureUserProfile = async (user: User) => {
     try {
-      const supabase = createClient();
+      const supabase = await createClient();
       
       // Check if a profile exists
       const { data: existingProfile, error: checkError } = await supabase
@@ -74,39 +74,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const supabase = createClient()
-    
-    // Get initial auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        setSession(session)
-        ensureUserProfile(session.user);
+    // Use an immediately-invoked async function expression (IIFE)
+    (async () => {
+      try {
+        const supabase = await createClient();
+        
+        // Get initial auth state
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(session.user);
+          setSession(session);
+          ensureUserProfile(session.user);
+        }
+        
+        // Set up auth subscription
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            setUser(session?.user || null);
+            setSession(session);
+            if (session?.user) {
+              ensureUserProfile(session.user);
+            }
+          }
+        );
+        
+        setIsLoading(false);
+        
+        // Cleanup subscription on unmount
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setIsLoading(false);
       }
-      setIsLoading(false)
-    })
-    
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user)
-        setSession(session)
-        ensureUserProfile(session.user);
-      } else {
-        setUser(null)
-        setSession(null)
-      }
-      setIsLoading(false)
-    })
-    
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
+    })();
+  }, []);
 
   // Sign out function
   const signOut = async () => {
-    const supabase = createClient()
+    const supabase = await createClient()
     await supabase.auth.signOut()
     router.push(PATHS.SIGN_IN)
   }
@@ -114,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sign in function
   const signIn = async (email: string, password: string) => {
     try {
-      const supabase = createClient()
+      const supabase = await createClient()
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -133,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sign up function
   const signUp = async (email: string, password: string) => {
     try {
-      const supabase = createClient()
+      const supabase = await createClient()
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
