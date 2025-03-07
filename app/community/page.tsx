@@ -7,7 +7,7 @@ import { createClient } from '@/app/lib/supabase/client';
 import { getPosts, getGroups, joinGroup, leaveGroup, togglePostLike, getProfile, getPostComments, createPostComment, toggleCommentLike, deletePostComment, deletePost } from '@/app/lib/supabase/database';
 import { Post, Group, Profile } from '@/app/lib/types';
 import { PostComment } from '@/app/types/database';
-import { Search, Heart, MessageSquare, Plus, Send, X, ChevronDown, ChevronUp, MessageCircle, Reply, MoreVertical, Trash } from 'lucide-react';
+import { Search, Heart, MessageSquare, Plus, Send, X, ChevronDown, ChevronUp, MessageCircle, Reply, MoreVertical, Trash, Users } from 'lucide-react';
 
 interface DiscussionCardProps {
   post: Post;
@@ -73,7 +73,7 @@ const CommentItem = ({
   });
 
   return (
-    <div className={`flex items-start gap-2 p-2 rounded-md transition-colors ${isParentComment ? 'hover:bg-[#F8F7F2]' : 'ml-8 mt-2 border-l-2 border-[#E8E6E1] pl-3'}`}>
+    <div className={`flex items-start gap-2 p-2 rounded-md transition-colors ${isParentComment ? 'hover:bg-[#4A7B61]/10' : 'ml-8 mt-2 border-l-2 border-[#4A7B61]/20 pl-3'}`}>
       <img
         src={comment.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(comment.author?.full_name || 'User')}
         alt={comment.author?.full_name || 'User'}
@@ -88,7 +88,7 @@ const CommentItem = ({
               <div className="relative">
                 <button 
                   onClick={() => setShowOptions(!showOptions)}
-                  className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-1 rounded-full hover:bg-[#F5F4F2]"
+                  className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-1 rounded-full hover:bg-[#4A7B61]/15"
                   aria-label="Comment options"
                 >
                   <MoreVertical size={16} className={isParentComment ? "text-[#58534D]" : ""} />
@@ -104,7 +104,7 @@ const CommentItem = ({
                         onDeleteComment(comment.id);
                         setShowOptions(false);
                       }}
-                      className="flex items-center w-full px-3 py-2 text-xs text-left text-red-600 hover:bg-gray-100"
+                      className="flex items-center w-full px-3 py-2 text-xs text-left text-red-600 hover:bg-[#4A7B61]/10"
                     >
                       <Trash size={14} className="mr-2" />
                       Delete
@@ -123,7 +123,7 @@ const CommentItem = ({
           {isLongComment && (
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
-              className="ml-1 text-[#6B8068] hover:text-[#4A7B61] font-medium text-xs"
+              className="ml-1 text-[#4A7B61] hover:text-[#3A6B51] font-medium text-xs"
             >
               {isExpanded ? 'Show less' : 'Read more'}
             </button>
@@ -391,7 +391,7 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
               <div className="relative">
                 <button 
                   onClick={() => setShowOptions(!showOptions)}
-                  className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-2 rounded-full hover:bg-[#F5F4F2]"
+                  className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-2 rounded-full hover:bg-[#4A7B61]/15"
                   aria-label="Post options"
                 >
                   <MoreVertical size={18} strokeWidth={2} className="text-[#58534D]" />
@@ -409,7 +409,7 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
                         }
                         setShowOptions(false);
                       }}
-                      className="flex items-center w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-gray-100"
+                      className="flex items-center w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-[#4A7B61]/10"
                     >
                       <Trash size={16} className="mr-2" />
                       Delete
@@ -437,7 +437,7 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
           
           <div className="flex items-center mt-3.5">
             {post.category && (
-              <span className="text-xs px-3.5 py-1.5 bg-[#F8F7F2] rounded-full text-[#4A7B61] font-medium border border-[#E8E6E1]/50">{post.category}</span>
+              <span className="text-xs px-3.5 py-1.5 bg-[#4A7B61]/15 rounded-full text-[#4A7B61] font-medium border border-[#4A7B61]/20">{post.category}</span>
             )}
             
             <div className="flex items-center ml-auto space-x-5">
@@ -478,10 +478,10 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
           
           {/* Comments section */}
           {showComments && (
-            <div className="mt-4 pl-2 border-l-2 border-[#E8E6E1] animate-fadeIn">
+            <div className="mt-4 pl-2 border-l-2 border-[#4A7B61]/20 animate-fadeIn">
               {isLoadingComments ? (
                 <div className="py-3 text-center">
-                  <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#6B8068] border-t-transparent"></div>
+                  <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#4A7B61] border-t-transparent"></div>
                   <span className="ml-2 text-sm text-[#706C66]">Loading comments...</span>
                 </div>
               ) : comments.length === 0 ? (
@@ -510,7 +510,7 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
                     <>
                       <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#FFFFFF] to-transparent pointer-events-none" aria-hidden="true"></div>
                       <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none" aria-hidden="true">
-                        <div className="px-2 py-1 bg-[#F5F4F2] rounded-full text-xs text-[#706C66] shadow-sm">
+                        <div className="px-2 py-1 bg-[#4A7B61]/15 rounded-full text-xs text-[#4A7B61] shadow-sm">
                           Scroll for more
                         </div>
                       </div>
@@ -533,12 +533,12 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
                         placeholder="Add a comment..."
-                        className="w-full border border-[#E8E6E1] rounded-lg p-2 pr-10 text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[#6B8068] resize-none min-h-[60px]"
+                        className="w-full border border-[#E8E6E1] rounded-lg p-2 pr-10 text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[#4A7B61] resize-none min-h-[60px]"
                       ></textarea>
                       <button
                         type="submit"
                         disabled={!commentText.trim()}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#6B8068] hover:text-[#4A7B61] transition-colors disabled:text-[#A9A6A1] disabled:cursor-not-allowed"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4A7B61] hover:text-[#3A6B51] transition-colors disabled:text-[#A9A6A1] disabled:cursor-not-allowed"
                         aria-label="Send comment"
                         title="Send comment"
                       >
@@ -548,8 +548,8 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
                   </div>
                 </form>
               ) : (
-                <div className="mt-3 mb-1 p-2 bg-[#F5F4F2] rounded-lg text-center text-sm">
-                  <Link href="/auth/signin" className="text-[#6B8068] font-medium hover:underline">
+                <div className="mt-3 mb-1 p-2 bg-[#4A7B61]/15 rounded-lg text-center text-sm">
+                  <Link href="/auth/signin" className="text-[#4A7B61] font-medium hover:underline">
                     Sign in to add a comment
                   </Link>
                 </div>
@@ -595,11 +595,11 @@ const GroupCard = ({ group, currentUserId, onMembershipToggle }: GroupCardProps)
               e.preventDefault();
               onMembershipToggle(group.id, !!group.is_member);
             }}
-            className={`text-sm font-medium px-4 py-2 rounded-full border transition-all ${
+            className={`text-sm font-medium px-4 py-2 rounded-full transition-all ${
               group.is_member 
-                ? 'border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400' 
-                : 'border-[#4A7B61]/30 text-[#4A7B61] hover:bg-[#4A7B61]/10 hover:border-[#4A7B61]/60'
-            } shadow-sm ml-3`}
+                ? 'bg-red-100/80 text-red-600 hover:bg-red-100 border border-red-200' 
+                : 'bg-[#4A7B61]/15 text-[#4A7B61] hover:bg-[#4A7B61]/20 border border-[#4A7B61]/20'
+            }`}
           >
             {group.is_member ? 'Leave' : 'Join'}
           </button>
@@ -624,14 +624,10 @@ const CreatePostButton = ({ currentUserId }: { currentUserId: string | null }): 
   return (
     <button 
       onClick={() => router.push('/community/create-post')}
-      className="fixed bottom-8 right-8 flex items-center justify-center bg-[#4A7B61] text-white rounded-full w-16 h-16 shadow-lg hover:shadow-xl hover:bg-[#3A6B51] transition-all z-10 hover:scale-105 active:scale-95"
+      className="fixed bottom-6 right-6 flex items-center justify-center bg-[#4A7B61] text-white rounded-full w-14 h-14 shadow-lg hover:bg-[#3A6B51] transition-colors"
       aria-label="Create Post"
     >
-      <Plus 
-        size={28} 
-        strokeWidth={2.5} 
-        className="transform transition-transform duration-300 group-hover:rotate-90" 
-      />
+      <Plus size={24} />
       <span className="sr-only">Create new post</span>
     </button>
   );
@@ -895,144 +891,193 @@ const CommunityPage = (): JSX.Element => {
   };
 
   return (
-    <div className="bg-white min-h-screen">
-      {/* Mobile-optimized Header */}
-      <div className="bg-gradient-to-b from-[#F8F7F2] to-white">
-        <div className="max-w-[780px] mx-auto px-4">
-          {/* Title and search area with improved spacing */}
-          <div className="pt-7 sm:pt-10 pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
-              <div className="relative flex justify-center sm:justify-start mt-3 sm:mt-0">
-                <div className="relative">
-                  <h1 className="text-2xl sm:text-3xl font-semibold text-[#2C2925] text-center sm:text-left">Community</h1>
-                  <div className="absolute -bottom-1.5 left-1/2 sm:left-0 transform -translate-x-1/2 sm:translate-x-0 w-10 h-1 bg-[#4A7B61] rounded-full opacity-70"></div>
-                </div>
+    <div className="min-h-screen bg-[#F8F7F2] text-[#2C2925]">
+      {/* Content */}
+      <div className="w-full px-4 md:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
+        <div className="max-w-[90rem] mx-auto">
+          {/* Header with light green background - matches resources page */}
+          <div className="relative rounded-2xl overflow-hidden mb-8 mx-4 sm:mx-6 lg:mx-8 border border-[#4A7B61]/20">
+            <div className="absolute inset-0 bg-[#4A7B61]/15"></div>
+            <div className="relative z-10 px-6 py-8 md:px-8 md:py-10">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-[#4A7B61]/20 text-[#4A7B61] mb-4">
+                <span>Connect with our faith community</span>
               </div>
-              
-              {/* Search field - full width on mobile */}
-              <div className="w-full sm:w-auto mt-4 sm:mt-0">
+              <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-[#2C2925] mb-2">
+                Community
+              </h1>
+              <p className="text-sm sm:text-base text-[#706C66] max-w-md">
+                Join conversations and connect with others on similar faith journeys
+              </p>
+            </div>
+          </div>
+          
+          {/* Search and Tab Navigation */}
+          <div className="px-5 sm:px-8 lg:px-10">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+              {/* Search */}
+              <div className="w-full sm:w-auto">
                 <form onSubmit={handleSearch} className="relative">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Search size={16} strokeWidth={1.5} className="text-[#706C66]" />
+                  </div>
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search discussions..."
-                    className="w-full sm:w-[240px] h-11 pl-11 pr-4 py-2 bg-white border border-[#E8E6E1] rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7B61]/20 focus:border-[#4A7B61] shadow-sm transition-all hover:border-[#4A7B61]/30"
+                    className="block w-full sm:w-[240px] py-2.5 pl-10 pr-3 border border-[#E8E6E1] rounded-full bg-white text-[#2C2925] placeholder-[#706C66] focus:border-[#4A7B61]/50 focus:outline-none focus:ring-1 focus:ring-[#4A7B61]/50 transition-all duration-200 min-h-[44px]"
                   />
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#4A7B61]">
-                    <Search size={18} strokeWidth={2} />
-                  </div>
                 </form>
               </div>
+              
+              {/* Create Post Button - for desktop */}
+              {currentUserId && (
+                <div className="hidden sm:block">
+                  <button
+                    onClick={() => router.push('/community/create-post')}
+                    className="inline-flex items-center justify-center rounded-full bg-[#4A7B61] text-white font-medium px-4 py-2.5 text-sm transition-all duration-200 hover:bg-[#3A6B51]"
+                  >
+                    <Plus size={18} className="mr-1.5" />
+                    Start a discussion
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Tabs */}
+            <div className="flex border-b border-[#E8E6E1] mb-6">
+              <button 
+                onClick={() => setActiveTab('discussions')}
+                className={`relative text-sm font-medium py-3 px-5 transition-all ${
+                  activeTab === 'discussions' 
+                    ? 'text-[#4A7B61] font-semibold' 
+                    : 'text-[#706C66] hover:text-[#4A7B61]/80'
+                }`}
+              >
+                <div className="flex items-center">
+                  <MessageSquare size={16} className="mr-2" />
+                  Discussions
+                </div>
+                {activeTab === 'discussions' && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#4A7B61] rounded-full"></div>
+                )}
+              </button>
+              <button 
+                onClick={() => setActiveTab('groups')}
+                className={`relative text-sm font-medium py-3 px-5 transition-all ${
+                  activeTab === 'groups' 
+                    ? 'text-[#4A7B61] font-semibold' 
+                    : 'text-[#706C66] hover:text-[#4A7B61]/80'
+                }`}
+              >
+                <div className="flex items-center">
+                  <Users size={16} className="mr-2" />
+                  Groups
+                </div>
+                {activeTab === 'groups' && (
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#4A7B61] rounded-full"></div>
+                )}
+              </button>
             </div>
           </div>
-            
-          {/* Tabs - centered on mobile */}
-          <div className="flex justify-center sm:justify-start pl-0 border-b border-[#E8E6E1] mt-2">
-            <button 
-              onClick={() => setActiveTab('discussions')}
-              className={`relative text-sm font-medium py-3.5 px-6 transition-all ${
-                activeTab === 'discussions' 
-                  ? 'text-[#4A7B61] font-semibold' 
-                  : 'text-[#706C66] hover:text-[#4A7B61]/80'
-              }`}
-            >
-              Discussions
-              {activeTab === 'discussions' && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#4A7B61] rounded-full"></div>
-              )}
-            </button>
-            <button 
-              onClick={() => setActiveTab('groups')}
-              className={`relative text-sm font-medium py-3.5 px-6 transition-all ${
-                activeTab === 'groups' 
-                  ? 'text-[#4A7B61] font-semibold' 
-                  : 'text-[#706C66] hover:text-[#4A7B61]/80'
-              }`}
-            >
-              Groups
-              {activeTab === 'groups' && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#4A7B61] rounded-full"></div>
-              )}
-            </button>
+          
+          {/* Main content */}
+          <div className="px-5 sm:px-8 lg:px-10">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-16">
+                <div className="w-8 h-8 border-2 border-[#4A7B61] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <>
+                {activeTab === 'discussions' && (
+                  <div>
+                    {posts.length > 0 ? (
+                      <div className="bg-white rounded-xl border border-[#E8E6E1] overflow-hidden divide-y divide-[#E8E6E1]/60">
+                        {posts.map((post) => (
+                          <div key={post.id} className="hover:bg-[#F8F7F2]/40 transition-colors duration-200">
+                            <DiscussionCard 
+                              post={post} 
+                              currentUserId={currentUserId} 
+                              currentUser={currentUser} 
+                              onLikeToggle={handlePostLikeToggle}
+                              onDeletePost={handlePostDelete}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-[#E8E6E1]">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4A7B61]/15 text-[#4A7B61] mb-4">
+                          <MessageSquare size={24} strokeWidth={1.5} />
+                        </div>
+                        <h3 className="text-lg font-medium text-[#2C2925] mb-2">No discussions yet</h3>
+                        <p className="text-[#706C66] mb-6">Be the first to start a conversation</p>
+                        {currentUserId && (
+                          <button
+                            onClick={() => router.push('/community/create-post')}
+                            className="inline-flex items-center px-4 py-2 rounded-full bg-[#4A7B61] text-white hover:bg-[#4A7B61]/90 transition-colors"
+                          >
+                            <Plus size={16} strokeWidth={1.5} className="mr-1.5" />
+                            Start a discussion
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {activeTab === 'groups' && (
+                  <div>
+                    {groups.length > 0 ? (
+                      <div className="bg-white rounded-xl border border-[#E8E6E1] overflow-hidden divide-y divide-[#E8E6E1]/60">
+                        {groups.map((group) => (
+                          <div key={group.id} className="hover:bg-[#F8F7F2]/40 transition-colors duration-200">
+                            <GroupCard 
+                              group={group} 
+                              currentUserId={currentUserId} 
+                              onMembershipToggle={handleGroupMembershipToggle} 
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-[#E8E6E1]">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4A7B61]/15 text-[#4A7B61] mb-4">
+                          <Users size={24} strokeWidth={1.5} />
+                        </div>
+                        <h3 className="text-lg font-medium text-[#2C2925] mb-2">No groups available</h3>
+                        <p className="text-[#706C66] mb-6">Join or create a group to get started</p>
+                        {currentUserId && (
+                          <button
+                            onClick={() => router.push('/community/create-group')}
+                            className="inline-flex items-center px-4 py-2 rounded-full bg-[#4A7B61] text-white hover:bg-[#4A7B61]/90 transition-colors"
+                          >
+                            <Plus size={16} strokeWidth={1.5} className="mr-1.5" />
+                            Create a group
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
       
-      {/* Main content with better spacing */}
-      <div className="max-w-[780px] mx-auto px-4 mt-5 sm:mt-7 pb-24">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-16">
-            <div className="w-8 h-8 border-2 border-[#4A7B61] border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <>
-            {activeTab === 'discussions' && (
-              <div>
-                {posts.length > 0 ? (
-                  <div className="bg-white rounded-xl shadow-sm border border-[#E8E6E1] overflow-hidden divide-y divide-[#E8E6E1]/60">
-                    {posts.map((post) => (
-                      <div key={post.id} className="hover:bg-[#FAFAFA]/80 transition-colors duration-200">
-                        <DiscussionCard 
-                          post={post} 
-                          currentUserId={currentUserId} 
-                          currentUser={currentUser} 
-                          onLikeToggle={handlePostLikeToggle}
-                          onDeletePost={handlePostDelete}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-[#E8E6E1]">
-                    <p className="text-sm text-[#706C66] mb-4">No discussions yet</p>
-                    {currentUserId && (
-                      <button
-                        onClick={() => router.push('/community/create-post')}
-                        className="px-6 py-2.5 bg-[#4A7B61] text-white text-sm rounded-full shadow-sm hover:bg-[#3A6B51] transition-colors font-medium"
-                      >
-                        Start a discussion
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {activeTab === 'groups' && (
-              <div>
-                {groups.length > 0 ? (
-                  <div className="bg-white rounded-xl shadow-sm border border-[#E8E6E1] overflow-hidden divide-y divide-[#E8E6E1]/60">
-                    {groups.map((group) => (
-                      <div key={group.id} className="hover:bg-[#FAFAFA]/80 transition-colors duration-200">
-                        <GroupCard 
-                          group={group} 
-                          currentUserId={currentUserId} 
-                          onMembershipToggle={handleGroupMembershipToggle} 
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-[#E8E6E1]">
-                    <p className="text-sm text-[#706C66] mb-4">No groups available</p>
-                    {currentUserId && (
-                      <button
-                        onClick={() => router.push('/community/create-group')}
-                        className="px-6 py-2.5 bg-[#4A7B61] text-white text-sm rounded-full shadow-sm hover:bg-[#3A6B51] transition-colors font-medium"
-                      >
-                        Create a group
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-      
-      <CreatePostButton currentUserId={currentUserId} />
+      {/* Mobile floating create post button */}
+      {currentUserId && (
+        <div className="fixed right-6 bottom-6 sm:hidden">
+          <button
+            onClick={() => router.push('/community/create-post')}
+            className="flex items-center justify-center h-14 w-14 rounded-full bg-[#4A7B61] text-white shadow-lg hover:bg-[#3A6B51] transition-colors"
+            aria-label="Create a new post"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

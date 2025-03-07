@@ -160,171 +160,197 @@ export default function PostPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
-      <div className="mb-6 pl-16 sm:pl-0">
-        <Link 
-          href="/community" 
-          className="inline-flex items-center text-[#58534D] px-3 py-2 rounded-full bg-[#F8F7F2] hover:bg-[#E8E6E1] transition-colors no-underline"
-        >
-          <ArrowLeft size={16} className="mr-2" />
-          Back to Community
-        </Link>
-      </div>
-      
-      <div className="bg-white rounded-xl shadow-sm border border-[#E8E6E1] p-6 mb-6">
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="flex items-start gap-3">
-            <img
-              src={post.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.full_name || 'User')}
-              alt={post.author?.full_name || 'User'}
-              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-            />
-            
-            <div>
-              <div className="font-medium">{post.author?.full_name || 'Anonymous'}</div>
-              <div className="text-sm text-[#706C66]">
-                {new Date(post.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </div>
-            </div>
-          </div>
-          
-          {isOwnPost && (
-            <div className="relative">
-              <button 
-                onClick={() => setShowOptions(!showOptions)}
-                className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-2 rounded-full hover:bg-[#F5F4F2]"
-                aria-label="Post options"
-              >
-                <MoreVertical size={16} className="text-[#58534D]" />
-              </button>
-              
-              {showOptions && (
-                <div 
-                  ref={optionsRef}
-                  className="absolute right-0 top-8 bg-white shadow-md rounded-md py-1 z-10 min-w-[140px] border border-[#E8E6E1]"
-                >
-                  <button
-                    onClick={handleDeletePost}
-                    className="flex items-center w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-gray-100"
-                  >
-                    <Trash size={16} className="mr-2" />
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        
-        <h1 className="text-2xl font-semibold mb-4">{post.title}</h1>
-        
-        <div className="text-[#2C2925] mb-6 whitespace-pre-wrap">
-          {post.content}
-        </div>
-        
-        <div className="flex items-center mt-4">
-          <button 
-            onClick={handleLikeToggle}
-            disabled={!user}
-            className="flex items-center mr-6"
-          >
-            <Heart 
-              size={18} 
-              className={`${hasLiked ? "text-[#E74C3C] fill-[#E74C3C]" : "text-[#706C66]"} mr-2`}
-            />
-            <span>{post.likes || 0} likes</span>
-          </button>
-          
-          <div className="text-[#706C66]">
-            {comments.length} comments
+    <div className="bg-[#F8F7F2] min-h-screen pb-16">
+      {/* Header with back button */}
+      <div className="relative rounded-b-2xl overflow-hidden mb-6 border-b border-[#4A7B61]/20">
+        <div className="absolute inset-0 bg-[#4A7B61]/15"></div>
+        <div className="max-w-3xl mx-auto px-4 py-4 sm:px-6 relative z-10">
+          <div className="flex items-center">
+            <button 
+              onClick={() => router.push('/community')} 
+              className="inline-flex items-center text-[#2C2925] hover:text-[#4A7B61] transition-colors mr-4"
+              aria-label="Back to community"
+            >
+              <ArrowLeft size={20} strokeWidth={1.5} />
+              <span className="ml-2 font-medium">Back</span>
+            </button>
           </div>
         </div>
       </div>
       
-      {/* Comments section */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#E8E6E1] p-6">
-        <h2 className="text-lg font-semibold mb-6 text-[#2C2925]">Comments</h2>
-        
-        {comments.length === 0 ? (
-          <div className="text-[#706C66] mb-6 text-center py-6 bg-[#F8F7F2]/50 rounded-lg">
-            No comments yet. Be the first to comment!
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {comments.map((comment) => (
-              <div key={comment.id} className="border-b border-[#E8E6E1]/60 pb-4">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={comment.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(comment.author?.full_name || 'User')}
-                    alt={comment.author?.full_name || 'User'}
-                    className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1]"
-                  />
-                  
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-medium text-sm">{comment.author?.full_name || 'Anonymous'}</span>
-                      <span className="text-xs text-[#706C66]">
-                        {new Date(comment.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                    
-                    <div className="text-[#2C2925] whitespace-pre-wrap text-sm">
-                      {comment.content}
-                    </div>
+      {isLoading ? (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex justify-center items-center py-20">
+          <div className="w-10 h-10 border-4 border-[#4A7B61]/30 border-t-[#4A7B61] rounded-full animate-spin"></div>
+        </div>
+      ) : !post ? (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20 text-center">
+          <h1 className="text-2xl font-semibold text-[#2C2925] mb-4">Post not found</h1>
+          <p className="text-[#706C66] mb-6">The post you're looking for doesn't exist or has been removed.</p>
+          <Link href="/community" className="inline-flex items-center px-4 py-2 bg-[#4A7B61] text-white rounded-full hover:bg-[#3A6B51] transition-colors">
+            <ArrowLeft size={16} className="mr-2" />
+            Back to Community
+          </Link>
+        </div>
+      ) : (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          {/* Post content */}
+          <div className="bg-white rounded-xl border border-[#E8E6E1] p-6 mb-6">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-3">
+                <img
+                  src={post.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.full_name || 'User')}
+                  alt={post.author?.full_name || 'User'}
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1]"
+                />
+                
+                <div>
+                  <div className="font-medium">{post.author?.full_name || 'Anonymous'}</div>
+                  <div className="text-sm text-[#706C66]">
+                    {new Date(post.created_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-        
-        {/* Add comment form */}
-        {user ? (
-          <form onSubmit={handleSubmitComment} className="mt-6">
-            <div className="flex items-start gap-3">
-              <img
-                src={userProfile?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userProfile?.full_name || user?.email?.split('@')[0] || 'User')}
-                alt={userProfile?.full_name || user?.email?.split('@')[0] || 'User'}
-                className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1]"
-              />
               
-              <div className="flex-1">
-                <textarea
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Write a comment..."
-                  className="w-full px-4 py-3 border border-[#E8E6E1] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#4A7B61] focus:border-[#4A7B61] text-sm resize-none"
-                  rows={3}
-                ></textarea>
-                
-                <div className="flex justify-end mt-2">
-                  <button
-                    type="submit"
-                    disabled={!commentText.trim()}
-                    className="px-4 py-2 bg-[#4A7B61] text-white text-sm rounded-full disabled:opacity-50 hover:bg-[#3A6B51] transition-colors"
+              {isOwnPost && (
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowOptions(!showOptions)}
+                    className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-2 rounded-full hover:bg-[#4A7B61]/15"
+                    aria-label="Post options"
                   >
-                    Post Comment
+                    <MoreVertical size={16} className="text-[#58534D]" />
                   </button>
+                  
+                  {showOptions && (
+                    <div 
+                      ref={optionsRef}
+                      className="absolute right-0 top-8 bg-white shadow-md rounded-md py-1 z-10 min-w-[140px] border border-[#E8E6E1]"
+                    >
+                      <button
+                        onClick={handleDeletePost}
+                        className="flex items-center w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-[#4A7B61]/10"
+                      >
+                        <Trash size={16} className="mr-2" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
+            
+            {post.category && (
+              <div className="mb-3">
+                <span className="inline-block text-xs px-3 py-1 bg-[#4A7B61]/15 rounded-full text-[#4A7B61] font-medium border border-[#4A7B61]/20">{post.category}</span>
+              </div>
+            )}
+            
+            <h1 className="text-2xl font-semibold mb-4 text-[#2C2925]">{post.title}</h1>
+            
+            <div className="text-[#2C2925] mb-6 whitespace-pre-wrap">
+              {post.content}
+            </div>
+            
+            <div className="flex items-center pt-4 border-t border-[#E8E6E1]/60">
+              <button 
+                onClick={handleLikeToggle}
+                disabled={!user}
+                className="flex items-center mr-6 hover:text-[#E74C3C] transition-colors group"
+              >
+                <Heart 
+                  size={18} 
+                  className={`${hasLiked ? "text-[#E74C3C] fill-[#E74C3C]" : "text-[#706C66] group-hover:text-[#E74C3C]/70"} mr-2`}
+                  strokeWidth={hasLiked ? 0 : 2}
+                />
+                <span className={`${hasLiked ? "text-[#E74C3C]" : "text-[#706C66] group-hover:text-[#E74C3C]/70"}`}>{post.likes || 0} likes</span>
+              </button>
+              
+              <div className="text-[#706C66]">
+                {comments.length} comments
               </div>
             </div>
-          </form>
-        ) : (
-          <div className="mt-6 p-4 bg-[#F8F7F2] text-center rounded-lg">
-            <p className="text-[#706C66] mb-2">Sign in to join the conversation</p>
-            <Link href="/auth/login" className="text-[#4A7B61] font-medium hover:text-[#58534D] transition-colors no-underline">
-              Sign In
-            </Link>
           </div>
-        )}
-      </div>
+          
+          {/* Comments section */}
+          <div className="bg-white rounded-xl border border-[#E8E6E1] p-6">
+            <h2 className="text-lg font-semibold mb-6 text-[#2C2925]">Comments</h2>
+            
+            {comments.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4A7B61]/15 text-[#4A7B61] mb-4">
+                  <Send size={24} strokeWidth={1.5} />
+                </div>
+                <h3 className="text-lg font-medium text-[#2C2925] mb-2">No comments yet</h3>
+                <p className="text-[#706C66] mb-4">Be the first to join the conversation</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="border-b border-[#E8E6E1]/60 pb-4 last:border-b-0">
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={comment.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(comment.author?.full_name || 'User')}
+                        alt={comment.author?.full_name || 'User'}
+                        className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1]"
+                      />
+                      
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-sm text-[#2C2925]">{comment.author?.full_name || 'Anonymous'}</span>
+                          <span className="text-xs text-[#706C66]">
+                            {new Date(comment.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        
+                        <div className="text-[#58534D] whitespace-pre-wrap text-sm">
+                          {comment.content}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Add comment form */}
+            {user ? (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium mb-3 text-[#2C2925]">Add a comment</h3>
+                <form onSubmit={handleSubmitComment}>
+                  <div className="relative">
+                    <textarea
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Share your thoughts..."
+                      className="w-full border border-[#E8E6E1] rounded-lg p-3 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-[#4A7B61] focus:border-[#4A7B61] resize-none min-h-[100px]"
+                    ></textarea>
+                    <button
+                      type="submit"
+                      disabled={!commentText.trim()}
+                      className="absolute right-2 bottom-2 text-[#4A7B61] hover:text-[#3A6B51] transition-colors disabled:text-[#A9A6A1] disabled:cursor-not-allowed p-2"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <div className="mt-6 p-4 bg-[#4A7B61]/15 rounded-lg text-center">
+                <Link href="/auth/signin" className="font-medium text-[#4A7B61] hover:underline">
+                  Sign in to join the conversation
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

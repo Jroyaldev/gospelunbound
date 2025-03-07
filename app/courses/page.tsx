@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, ChevronDown, BookOpen, Clock, Star, ChevronRight, Check, RotateCcw } from 'lucide-react';
 
+// Define the hero green with consistent opacity 
+const HERO_GREEN = '#4A7B61';
+
 // Define types for our course data
 interface Course {
   id: string;
@@ -133,6 +136,13 @@ const MobileFilters = ({
   selectedFilters: Record<string, string>,
   onFilterChange: (key: string, value: string) => void
 }) => {
+  // Wrapper function to handle type conversion
+  const handleChange = (key: string, value: string) => {
+    if (key === 'level' || key === 'duration' || key === 'category') {
+      onFilterChange(key, value);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -156,10 +166,10 @@ const MobileFilters = ({
             className="fixed top-0 right-0 h-full w-[85%] max-w-md bg-[#F8F7F2] border-l border-[#E8E6E1] z-50 overflow-y-auto"
           >
             <div className="sticky top-0 bg-[#F8F7F2] border-b border-[#E8E6E1] z-10 flex justify-between items-center p-4">
-              <h2 className="font-medium text-lg tracking-tight">Filters</h2>
+              <h2 className="font-medium text-lg tracking-tight text-[#2C2925]">Filters</h2>
               <button 
                 onClick={onClose}
-                className="p-2 text-[#2C2925] hover:bg-[#F8F7F2]/50 rounded-full transition-colors"
+                className="p-2 text-[#706C66] hover:bg-[#4A7B61]/15 rounded-full transition-colors"
               >
                 <X size={20} strokeWidth={1.5} />
                 <span className="sr-only">Close</span>
@@ -177,11 +187,11 @@ const MobileFilters = ({
                     {options.map((option) => (
                       <button
                         key={option.id}
-                        onClick={() => onFilterChange(key, option.id)}
+                        onClick={() => handleChange(key, option.id)}
                         className={`flex items-center justify-between w-full px-3 py-2 text-left rounded-md transition-colors ${
                           selectedFilters[key] === option.id
-                            ? 'bg-[#F8F7F2] text-[#2C2925] font-medium'
-                            : 'hover:bg-[#F8F7F2]/30 text-[#706C66]'
+                            ? 'bg-[#4A7B61]/15 text-[#2C2925] font-medium'
+                            : 'hover:bg-[#4A7B61]/10 text-[#706C66]'
                         }`}
                       >
                         <span>{option.label}</span>
@@ -414,7 +424,7 @@ export default function CoursesPage() {
     setSearchQuery('');
   };
 
-  const handleFilterChange = (key: keyof typeof selectedFilters, value: string) => {
+  const handleFilterChange = (key: string, value: string) => {
     setSelectedFilters({ ...selectedFilters, [key]: value });
   };
 
@@ -423,11 +433,11 @@ export default function CoursesPage() {
       {/* Content */}
       <div className="w-full px-4 md:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
         <div className="max-w-[90rem] mx-auto">
-          {/* Header with decorative background */}
-          <div className="relative rounded-xl overflow-hidden mb-8 mx-4 sm:mx-6 lg:mx-8">
-            <div className="absolute inset-0 bg-[#F8F7F2] opacity-70"></div>
+          {/* Header with light green background - matches resources page */}
+          <div className="relative rounded-2xl overflow-hidden mb-8 mx-4 sm:mx-6 lg:mx-8 border border-[#4A7B61]/20">
+            <div className="absolute inset-0 bg-[#4A7B61]/15"></div>
             <div className="relative z-10 px-6 py-8 md:px-8 md:py-10">
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-white/90 text-[#2C2925]/70 mb-4">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-[#4A7B61]/20 text-[#4A7B61] mb-4">
                 <span>Learn at your own pace</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-[#2C2925] mb-2">
@@ -453,15 +463,15 @@ export default function CoursesPage() {
                     placeholder="Search courses..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="block w-full py-2.5 pl-10 pr-3 border border-[#E8E6E1] rounded-full bg-white text-[#2C2925] placeholder-[#706C66] focus:border-[#4A7B61] focus:ring-[#4A7B61] transition-all duration-200 min-h-[44px]"
+                    className="block w-full py-2.5 pl-10 pr-3 border border-[#E8E6E1] rounded-full bg-white text-[#2C2925] placeholder-[#706C66] focus:border-[#4A7B61]/50 focus:outline-none focus:ring-1 focus:ring-[#4A7B61]/50 transition-all duration-200 min-h-[44px]"
                   />
                 </div>
                 
                 <button
                   onClick={() => setShowFilters(true)}
-                  className="flex items-center justify-center min-h-[44px] px-4 py-2 bg-white border border-[#E8E6E1] rounded-full text-[#2C2925] hover:bg-[#F8F7F2]/30 transition-all duration-200"
+                  className="flex items-center justify-center min-h-[44px] px-4 py-2 bg-white border border-[#E8E6E1] rounded-full text-[#2C2925] hover:bg-[#F8F7F2] transition-all duration-200"
                 >
-                  <Filter size={16} strokeWidth={1.5} className="mr-2" />
+                  <Filter size={16} strokeWidth={1.5} className="mr-2 text-[#706C66]" />
                   <span className="text-sm">Filters</span>
                 </button>
               </div>
@@ -469,32 +479,63 @@ export default function CoursesPage() {
           </div>
           
           {/* Active filters */}
-          {Object.entries(selectedFilters).some(([_, value]) => value !== 'all') && (
-            <div className="px-5 sm:px-8 lg:px-10 mb-8">
+          {(selectedFilters.level !== 'all' || selectedFilters.duration !== 'all' || selectedFilters.category !== 'all' || searchQuery) && (
+            <div className="px-5 sm:px-8 lg:px-10 mb-6">
               <div className="flex flex-wrap items-center gap-2">
-                {Object.entries(selectedFilters).map(([key, value]) => {
-                  if (value === 'all') return null;
-                  
-                  const option = filterOptions[key as keyof typeof filterOptions].find(opt => opt.id === value);
-                  if (!option) return null;
-                  
-                  return (
-                    <button
-                      key={`${key}-${value}`}
-                      onClick={() => handleFilterChange(key as keyof typeof selectedFilters, 'all')}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#F8F7F2] text-[#2C2925]/70 text-xs hover:bg-[#4A7B61]/50 transition-all duration-200"
+                {searchQuery && (
+                  <div className="flex items-center gap-1.5 bg-[#4A7B61]/15 rounded-full px-3 py-1.5">
+                    <span className="text-[#2C2925]/80 text-xs">Search: {searchQuery}</span>
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="text-[#2C2925]/50 hover:text-[#2C2925] transition-colors"
                     >
-                      {option.label}
                       <X size={14} strokeWidth={1.5} />
                     </button>
-                  );
-                })}
+                  </div>
+                )}
+                
+                {selectedFilters.level !== 'all' && (
+                  <div className="flex items-center gap-1.5 bg-[#4A7B61]/15 rounded-full px-3 py-1.5">
+                    <span className="text-[#2C2925]/80 text-xs">Level: {filterOptions.level.find(option => option.id === selectedFilters.level)?.label}</span>
+                    <button 
+                      onClick={() => handleFilterChange('level', 'all')}
+                      className="text-[#2C2925]/50 hover:text-[#2C2925] transition-colors"
+                    >
+                      <X size={14} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                )}
+                
+                {selectedFilters.duration !== 'all' && (
+                  <div className="flex items-center gap-1.5 bg-[#4A7B61]/15 rounded-full px-3 py-1.5">
+                    <span className="text-[#2C2925]/80 text-xs">Duration: {filterOptions.duration.find(option => option.id === selectedFilters.duration)?.label}</span>
+                    <button 
+                      onClick={() => handleFilterChange('duration', 'all')}
+                      className="text-[#2C2925]/50 hover:text-[#2C2925] transition-colors"
+                    >
+                      <X size={14} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                )}
+                
+                {selectedFilters.category !== 'all' && (
+                  <div className="flex items-center gap-1.5 bg-[#4A7B61]/15 rounded-full px-3 py-1.5">
+                    <span className="text-[#2C2925]/80 text-xs">Category: {filterOptions.category.find(option => option.id === selectedFilters.category)?.label}</span>
+                    <button 
+                      onClick={() => handleFilterChange('category', 'all')}
+                      className="text-[#2C2925]/50 hover:text-[#2C2925] transition-colors"
+                    >
+                      <X size={14} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                )}
+                
                 <button
                   onClick={resetFilters}
-                  className="text-xs text-[#4A7B61] hover:underline underline-offset-4 flex items-center gap-1"
+                  className="flex items-center gap-1.5 text-xs text-[#706C66] hover:text-[#4A7B61] transition-colors"
                 >
-                  <RotateCcw size={12} strokeWidth={1.5} />
-                  Reset all
+                  <RotateCcw size={14} strokeWidth={1.5} />
+                  <span>Reset filters</span>
                 </button>
               </div>
             </div>
@@ -654,6 +695,24 @@ export default function CoursesPage() {
               )}
             </div>
           </div>
+          
+          {/* Show no results message if all sections are empty */}
+          {filteredFeaturedCourses.length === 0 && filteredBiblicalStudies.length === 0 && filteredTheologyCourses.length === 0 && (
+            <div className="px-5 sm:px-8 lg:px-10 py-16 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4A7B61]/15 text-[#4A7B61] mb-4">
+                <BookOpen size={24} strokeWidth={1.5} />
+              </div>
+              <h3 className="text-lg font-medium text-[#2C2925] mb-2">No courses found</h3>
+              <p className="text-[#706C66] mb-6 max-w-md mx-auto">Try adjusting your filters or search term</p>
+              <button
+                onClick={resetFilters}
+                className="inline-flex items-center px-4 py-2 rounded-full bg-[#4A7B61] text-white hover:bg-[#4A7B61]/90 transition-colors"
+              >
+                <RotateCcw size={16} strokeWidth={1.5} className="mr-2" />
+                <span>Reset filters</span>
+              </button>
+            </div>
+          )}
           
           {/* Pagination */}
           <div className="flex justify-center items-center space-x-2 mt-10 mb-6">
