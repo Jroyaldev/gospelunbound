@@ -18,7 +18,26 @@ export default function UserProgress() {
         try {
           setIsLoadingProgress(true)
           const userProgress = await getUserCourseProgress(user.id)
-          setProgress(userProgress)
+          
+          // Transform UserCourseProgress[] to CourseWithProgress[]
+          const transformedProgress: CourseWithProgress[] = userProgress.map(item => {
+            if (!item.courses) return {} as CourseWithProgress;
+            
+            return {
+              ...item.courses,
+              progress: {
+                id: item.id,
+                user_id: item.user_id,
+                course_id: item.course_id,
+                started_at: item.started_at,
+                last_accessed_at: item.last_accessed_at,
+                completed_at: item.completed_at,
+                completion_percentage: item.completion_percentage
+              }
+            };
+          }).filter(item => item.id) as CourseWithProgress[];
+          
+          setProgress(transformedProgress)
         } catch (error) {
           console.error('Error loading progress:', error)
         } finally {

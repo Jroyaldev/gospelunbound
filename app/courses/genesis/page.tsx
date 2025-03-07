@@ -1,24 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Clock, BookOpen, Users, Star, Play, BookmarkPlus, GraduationCap, ChevronDown, CheckCircle, Lock, Share2, Download, Heart, MessageCircle, Check, FileText, VideoIcon } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import { Button } from '../../../components/ui/button';
+import { motion } from 'framer-motion';
+
+// Define proper types for lessons and sections
+interface Lesson {
+  title: string;
+  description: string;
+  duration: string;
+  isCompleted?: boolean;
+  isLocked?: boolean;
+  tags: string[];
+}
+
+interface CourseSection {
+  title: string;
+  lessons: Lesson[];
+}
 
 interface LessonRowProps {
-  lesson: {
-    title: string;
-    duration: string;
-    isCompleted?: boolean;
-    isLocked?: boolean;
-    tags: string[];
-  };
+  lesson: Lesson;
   sectionIndex: number;
   lessonIndex: number;
   onToggleCompleted: (sectionIndex: number, lessonIndex: number) => void;
 }
 
-function LessonRow({ lesson, sectionIndex, lessonIndex, onToggleCompleted }: LessonRowProps): React.ReactNode {
+function LessonRow({ lesson, sectionIndex, lessonIndex, onToggleCompleted }: LessonRowProps): JSX.Element {
   return (
     <div 
       className={`group relative rounded-xl p-2 sm:p-3 mb-1.5 sm:mb-2 last:mb-0 transition-all duration-200 touch-target
@@ -78,8 +90,7 @@ function LessonRow({ lesson, sectionIndex, lessonIndex, onToggleCompleted }: Les
 export default function GenesisCoursePage() {
   const [isSaved, setIsSaved] = useState(false);
   const [expandedSections, setExpandedSections] = useState<number[]>([0]); // Default expand first section
-  
-  const sections = [
+  const [sections, setSections] = useState<CourseSection[]>([
     {
       title: "Introduction to Genesis",
       lessons: [
@@ -210,7 +221,7 @@ export default function GenesisCoursePage() {
         }
       ]
     }
-  ];
+  ]);
   
   const totalLessons = sections.reduce((acc, section) => acc + section.lessons.length, 0);
   const completedLessons = sections.reduce((acc, section) => 
@@ -243,7 +254,7 @@ export default function GenesisCoursePage() {
       }
       return section;
     });
-    sections = newSections;
+    setSections(newSections);
   };
 
   return (

@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   signIn: async () => ({ success: false }),
   signUp: async () => ({ success: false })
-}) as React.Context<AuthContextType>;
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)

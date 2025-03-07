@@ -158,8 +158,8 @@ const TrendIndicator = ({ value }: { value: number }) => {
       className={`flex items-center ${isPositive ? 'text-[#5E8C73]' : 'text-[#8F5849]'}`}
     >
       {isPositive ? 
-        <ArrowUp className="h-3.5 w-3.5 mr-1" /> : 
-        <ArrowDown className="h-3.5 w-3.5 mr-1" />
+        <ArrowUp size={14} className="mr-1" /> : 
+        <ArrowDown size={14} className="mr-1" />
       }
       <span className="text-sm font-medium">{Math.abs(value)}%</span>
     </div>
