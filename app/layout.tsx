@@ -63,7 +63,7 @@ export default function RootLayout({
             
             {/* Main content area */}
             <div className="flex flex-col min-h-screen w-full lg:pl-64">
-              <main className="grow">
+              <main className="grow w-full">
                 <LoadingState />
                 {children}
               </main>

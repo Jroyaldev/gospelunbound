@@ -1,86 +1,123 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import { FileText, BookOpen, Users, Mail, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import React from 'react';
-import type { IconType } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { colorMap } from './lib/colors';
 
-// Placeholder images with updated solid background colors to match new sophisticated palette
+// Placeholder images with updated solid background colors to match hero green
 const placeholderImages = {
   hero: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='600' viewBox='0 0 1200 600'%3E%3Crect width='1200' height='600' fill='%23F8F7F2'/%3E%3C/svg%3E",
-  genesisCourse: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%234D453D'/%3E%3C/svg%3E",
-  articlePreview: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23675C52'/%3E%3C/svg%3E",
-  communityPreview: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23887D73'/%3E%3C/svg%3E",
+  genesisCourse: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%234A7B61'/%3E%3C/svg%3E",
+  articlePreview: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%234A7B61'/%3E%3C/svg%3E",
+  communityPreview: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%234A7B61'/%3E%3C/svg%3E",
   newsletter: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect width='400' height='400' fill='%23F8F7F2'/%3E%3C/svg%3E",
-  courses: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%234D453D'/%3E%3C/svg%3E",
-  resources: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23675C52'/%3E%3C/svg%3E"
+  courses: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%234A7B61'/%3E%3C/svg%3E",
+  resources: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%234A7B61'/%3E%3C/svg%3E"
 };
 
 interface QuickLinkProps {
   href: string;
-  icon: IconType;
+  icon: LucideIcon;
   badge: string;
   title: string;
   description: string;
   imageSrc: string;
 }
 
-const QuickLinkCard: React.FC<QuickLinkProps> = ({ href, icon: Icon, badge, title, description, imageSrc }) => {
-  // Extract the background color from the imageSrc to determine the icon color
-  const bgColor = imageSrc?.includes('4D453D') ? 'bg-[#4D453D]/10 text-[#4D453D]' :
-                 imageSrc?.includes('675C52') ? 'bg-[#675C52]/10 text-[#675C52]' :
-                 imageSrc?.includes('887D73') ? 'bg-[#887D73]/10 text-[#887D73]' :
-                 'bg-accent/10 text-accent';
-  
-  // Determine hover text color
-  const hoverColor = imageSrc?.includes('4D453D') ? 'group-hover:text-[#4D453D]' :
-                    imageSrc?.includes('675C52') ? 'group-hover:text-[#675C52]' :
-                    imageSrc?.includes('887D73') ? 'group-hover:text-[#887D73]' :
-                    'group-hover:text-accent';
+// Feature card component for consistent styling
+interface FeatureCardProps {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  linkText: string;
+  href: string;
+}
+
+const FeatureCard = ({ 
+  icon: Icon, 
+  title, 
+  description, 
+  linkText,
+  href,
+}: FeatureCardProps) => {
+  // Consistent hero green color for all feature cards
+  const accentColor = '#4A7B61';
   
   return (
-    <div className="group relative flex flex-col justify-between rounded-2xl bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:translate-y-[-2px] border border-[#E8E6E1] hover:border-[#E8E6E1]/80">
+    <div className="group relative flex flex-col rounded-2xl bg-[#4A7B61] transition-all duration-300 hover:translate-y-[-2px] border border-[#4A7B61]/30 overflow-hidden h-full">
+      <div className="p-6 sm:p-8 relative flex flex-col h-full">
+        <div className="mb-4">
+          <div className="rounded-full p-2.5 inline-flex transition-transform duration-300 group-hover:scale-110 bg-white/20">
+            <Icon strokeWidth={1.5} className="h-5 w-5 text-white" />
+          </div>
+        </div>
+        
+        <h3 className="text-lg font-semibold mb-3 text-white group-hover:text-white/90 transition-colors duration-300">
+          {title}
+        </h3>
+        
+        <p className="text-sm text-white/80 leading-relaxed flex-grow">
+          {description}
+        </p>
+        
+        <div className="mt-5 pt-5 border-t border-white/20">
+          <a href={href} className="inline-flex items-center text-sm font-medium text-white group-hover:text-white/90">
+            {linkText}
+            <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const QuickLinkCard: React.FC<QuickLinkProps> = ({ href, icon: Icon, badge, title, description, imageSrc }) => {
+  // Consistent hero green color
+  const accentColor = '#4A7B61';
+  
+  return (
+    <div className="group relative flex flex-col rounded-2xl bg-white transition-all duration-300 hover:translate-y-[-2px] border border-[#E8E6E1] overflow-hidden h-full">
+      {/* Green accent top */}
+      <div className="h-2 w-full bg-[#4A7B61]"></div>
+      
       <a href={href} className="absolute inset-0 z-10">
         <span className="sr-only">View {title}</span>
       </a>
       
       {/* Card content */}
-      <div className="p-6 sm:p-8">
-        <div className="mb-5">
-          <div className="mb-4 flex items-center space-x-2">
-            <div className={`rounded-full ${bgColor} p-2.5 transition-transform duration-300 group-hover:scale-110`}>
-              <Icon strokeWidth={1.5} className="h-5 w-5" />
-            </div>
-            
-            {badge && (
-              <span className="rounded-full bg-[#F8F7F2]/80 px-2.5 py-0.5 text-xs font-medium text-[#2C2925]">
-                {badge}
-              </span>
-            )}
+      <div className="p-6 sm:p-8 relative z-[1] flex flex-col h-full">
+        <div className="mb-4 flex items-center space-x-2">
+          <div className="rounded-full p-2.5 transition-transform duration-300 group-hover:scale-110 bg-[#F0F0F0]">
+            <Icon strokeWidth={1.5} className="h-5 w-5 text-[#706C66]" />
           </div>
           
-          <h3 className={`mb-2 text-base sm:text-lg font-semibold tracking-tight transition-colors duration-300 ${hoverColor}`}>
-            {title}
-          </h3>
-          
-          <p className="text-sm text-[#706C66] leading-relaxed">
-            {description}
-          </p>
+          {badge && (
+            <span className="rounded-full bg-[#F8F7F2] px-2.5 py-0.5 text-xs font-medium text-[#706C66]">
+              {badge}
+            </span>
+          )}
+        </div>
+        
+        <h3 className="text-lg font-semibold mb-3 text-[#2C2925] group-hover:text-[#4A7B61] transition-colors duration-300">
+          {title}
+        </h3>
+        
+        <p className="text-sm text-[#706C66] leading-relaxed flex-grow">
+          {description}
+        </p>
+        
+        <div className="mt-5 pt-5 border-t border-[#E8E6E1]">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-[#4A7B61]">Learn more</span>
+            <div className="rounded-full p-1.5 transition-transform duration-300 group-hover:translate-x-1 text-[#4A7B61]">
+              <ArrowRight size={16} />
+            </div>
+          </div>
         </div>
       </div>
-      
-      {/* Card image at bottom */}
-      {imageSrc && (
-        <div className="relative mt-auto overflow-hidden rounded-b-2xl">
-          <img
-            src={imageSrc}
-            alt={title}
-            className="h-48 w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-105"
-          />
-        </div>
-      )}
     </div>
   );
 };
@@ -89,7 +126,7 @@ const NewsletterSection: React.FC = () => {
   return (
     <section className="py-12 sm:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="rounded-2xl bg-[#F8F7F2] p-6 sm:p-8 lg:p-12 border border-[#E8E6E1] shadow-sm">
+        <div className="rounded-2xl bg-[#F8F7F2] p-6 sm:p-8 lg:p-12 border border-[#E8E6E1]">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:gap-8">
             <div className="mb-6 lg:mb-0 lg:max-w-xl">
               <div className="inline-flex items-center rounded-full bg-[#4A7B61]/10 px-3 py-1 text-xs font-medium text-[#4A7B61] mb-3 sm:mb-4">
@@ -117,7 +154,7 @@ const NewsletterSection: React.FC = () => {
                 
                 <button 
                   type="submit" 
-                  className="inline-flex items-center justify-center rounded-full bg-[#4A7B61] font-medium px-5 py-2.5 sm:px-6 sm:py-3 text-sm text-white transition-all duration-300 hover:opacity-90 hover:shadow-sm min-h-[44px]"
+                  className="inline-flex items-center justify-center rounded-full bg-[#4A7B61] font-medium px-5 py-2.5 sm:px-6 sm:py-3 text-sm text-white transition-all duration-300 hover:opacity-90 min-h-[44px]"
                 >
                   Subscribe
                 </button>
@@ -137,12 +174,12 @@ const NewsletterSection: React.FC = () => {
 const Home: React.FC = () => {
   return (
     <main className="min-h-screen bg-[#F8F7F2] text-[#2C2925]">
-      {/* Hero section - keeping as requested */}
+      {/* Hero section - flat design */}
       <section className="py-12 sm:py-16 md:py-20">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-          <div className="w-full rounded-2xl bg-gradient-to-br from-[#4A7B61]/90 to-[#3D644E]/80 overflow-hidden border border-[#4A7B61]/30 shadow-sm transition-all duration-300 hover:shadow-md">
+          <div className="w-full rounded-2xl bg-[#4A7B61] overflow-hidden border border-[#4A7B61]/30 transition-all duration-300 hover:translate-y-[-2px]">
             <div className="p-8 sm:p-10 lg:p-12 relative">
-              <div className="max-w-3xl mx-auto text-center z-10 relative">
+              <div className="max-w-3xl mx-auto text-center">
                 <div className="inline-flex items-center rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white mb-5 sm:mb-6">
                   Explore a progressive approach to faith
                 </div>
@@ -159,7 +196,7 @@ const Home: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                   <a
                     href="/courses"
-                    className="inline-flex items-center justify-center rounded-full bg-white text-[#4A7B61] font-medium px-6 py-3 text-sm sm:text-base transition-all duration-300 hover:bg-white/90 hover:shadow-md min-h-[44px]"
+                    className="inline-flex items-center justify-center rounded-full bg-white text-[#4A7B61] font-medium px-6 py-3 text-sm sm:text-base transition-all duration-300 hover:bg-white/90 min-h-[44px]"
                   >
                     Explore Our Courses
                   </a>
@@ -171,11 +208,6 @@ const Home: React.FC = () => {
                   </a>
                 </div>
               </div>
-              
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#6E9C85]/20 rounded-full -mr-20 -mt-20 blur-xl"></div>
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#6E9C85]/20 rounded-full -ml-16 -mb-16 blur-xl"></div>
-              <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full transform -translate-y-1/2 blur-sm"></div>
             </div>
           </div>
         </div>
@@ -234,101 +266,29 @@ const Home: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            {/* Course Feature Card */}
-            <div className="group relative flex flex-col rounded-2xl bg-white shadow-sm p-6 sm:p-8 transition-all duration-300 hover:shadow-md hover:translate-y-[-2px] border border-[#E8E6E1] hover:border-[#4D453D]/40 h-full">
-              <div className="mb-6">
-                <div className="mb-4">
-                  <div className="rounded-full bg-[#4D453D]/10 p-2.5 inline-flex transition-transform duration-300 group-hover:scale-110">
-                    <BookOpen strokeWidth={1.5} className="h-5 w-5 text-[#4D453D]" />
-                  </div>
-                </div>
-                
-                <h3 className="text-lg font-semibold mb-3 group-hover:text-[#4D453D] transition-colors duration-300">
-                  In-depth courses
-                </h3>
-                
-                <p className="text-sm text-[#706C66] leading-relaxed">
-                  Academically rigorous yet accessible courses taught by theological scholars and religious leaders.
-                </p>
-              </div>
-              
-              <div className="mt-auto">
-                <a 
-                  href="/courses" 
-                  className="text-sm font-medium text-[#4D453D] hover:underline inline-flex items-center group/link"
-                >
-                  Browse courses
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1 transform transition-transform duration-300 group-hover/link:translate-x-1">
-                    <path d="M5 12h14"></path>
-                    <path d="m12 5 7 7-7 7"></path>
-                  </svg>
-                </a>
-              </div>
-            </div>
+            <FeatureCard 
+              icon={BookOpen}
+              title="In-depth courses"
+              description="Structured learning experiences that guide you through theological topics with progressive perspectives."
+              linkText="Explore courses"
+              href="/courses"
+            />
             
-            {/* Resources Feature Card */}
-            <div className="group relative flex flex-col rounded-2xl bg-white shadow-sm p-6 sm:p-8 transition-all duration-300 hover:shadow-md hover:translate-y-[-2px] border border-[#E8E6E1] hover:border-[#675C52]/40 h-full">
-              <div className="mb-6">
-                <div className="mb-4">
-                  <div className="rounded-full bg-[#675C52]/10 p-2.5 inline-flex transition-transform duration-300 group-hover:scale-110">
-                    <FileText strokeWidth={1.5} className="h-5 w-5 text-[#675C52]" />
-                  </div>
-                </div>
-                
-                <h3 className="text-lg font-semibold mb-3 group-hover:text-[#675C52] transition-colors duration-300">
-                  Thoughtful resources
-                </h3>
-                
-                <p className="text-sm text-[#706C66] leading-relaxed">
-                  Articles, podcasts, and content that explore questions about faith in the modern world.
-                </p>
-              </div>
-              
-              <div className="mt-auto">
-                <a 
-                  href="/resources" 
-                  className="text-sm font-medium text-[#675C52] hover:underline inline-flex items-center group/link"
-                >
-                  View resources
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1 transform transition-transform duration-300 group-hover/link:translate-x-1">
-                    <path d="M5 12h14"></path>
-                    <path d="m12 5 7 7-7 7"></path>
-                  </svg>
-                </a>
-              </div>
-            </div>
+            <FeatureCard 
+              icon={FileText}
+              title="Thoughtful resources"
+              description="Articles, podcasts, and content that explore questions about faith in the modern world."
+              linkText="View resources"
+              href="/resources"
+            />
             
-            {/* Community Feature Card */}
-            <div className="group relative flex flex-col rounded-2xl bg-white shadow-sm p-6 sm:p-8 transition-all duration-300 hover:shadow-md hover:translate-y-[-2px] border border-[#E8E6E1] hover:border-[#887D73]/40 h-full">
-              <div className="mb-6">
-                <div className="mb-4">
-                  <div className="rounded-full bg-[#887D73]/10 p-2.5 inline-flex transition-transform duration-300 group-hover:scale-110">
-                    <Users strokeWidth={1.5} className="h-5 w-5 text-[#887D73]" />
-                  </div>
-                </div>
-                
-                <h3 className="text-lg font-semibold mb-3 group-hover:text-[#887D73] transition-colors duration-300">
-                  Supportive community
-                </h3>
-                
-                <p className="text-sm text-[#706C66] leading-relaxed">
-                  Connect with fellow seekers in facilitated discussions and learning cohorts.
-                </p>
-              </div>
-              
-              <div className="mt-auto">
-                <a 
-                  href="/community" 
-                  className="text-sm font-medium text-[#887D73] hover:underline inline-flex items-center group/link"
-                >
-                  Join community
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1 transform transition-transform duration-300 group-hover/link:translate-x-1">
-                    <path d="M5 12h14"></path>
-                    <path d="m12 5 7 7-7 7"></path>
-                  </svg>
-                </a>
-              </div>
-            </div>
+            <FeatureCard 
+              icon={Users}
+              title="Supportive community"
+              description="Connect with fellow seekers in facilitated discussions and learning cohorts."
+              linkText="Join community"
+              href="/community"
+            />
           </div>
         </div>
       </section>
@@ -336,7 +296,7 @@ const Home: React.FC = () => {
       {/* Testimonials Section */}
       <section className="py-16 sm:py-20">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-          <div className="text-center mb-10 sm:mb-12">
+          <div className="text-center mb-10">
             <h2 className="text-xl sm:text-2xl font-medium tracking-tight text-[#2C2925] mb-3">
               What our community is saying
             </h2>
@@ -347,7 +307,7 @@ const Home: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Testimonial 1 */}
-            <div className="flex flex-col bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E6E1] shadow-sm transition-all duration-300 hover:shadow-md hover:translate-y-[-2px]">
+            <div className="flex flex-col bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E6E1] transition-all duration-300 hover:translate-y-[-2px]">
               <div className="mb-4">
                 <div className="flex">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -365,7 +325,7 @@ const Home: React.FC = () => {
               </div>
               
               <div className="flex items-center mt-auto">
-                <div className="w-10 h-10 bg-[#F8F7F2] rounded-full flex items-center justify-center text-[#4D453D] font-medium">
+                <div className="w-10 h-10 bg-[#4A7B61]/10 rounded-full flex items-center justify-center text-[#4A7B61] font-medium">
                   JL
                 </div>
                 <div className="ml-3">
@@ -376,7 +336,7 @@ const Home: React.FC = () => {
             </div>
             
             {/* Testimonial 2 */}
-            <div className="flex flex-col bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E6E1] shadow-sm transition-all duration-300 hover:shadow-md hover:translate-y-[-2px]">
+            <div className="flex flex-col bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E6E1] transition-all duration-300 hover:translate-y-[-2px]">
               <div className="mb-4">
                 <div className="flex">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -394,7 +354,7 @@ const Home: React.FC = () => {
               </div>
               
               <div className="flex items-center mt-auto">
-                <div className="w-10 h-10 bg-[#F8F7F2] rounded-full flex items-center justify-center text-[#675C52] font-medium">
+                <div className="w-10 h-10 bg-[#4A7B61]/10 rounded-full flex items-center justify-center text-[#4A7B61] font-medium">
                   MR
                 </div>
                 <div className="ml-3">
@@ -405,7 +365,7 @@ const Home: React.FC = () => {
             </div>
             
             {/* Testimonial 3 */}
-            <div className="flex flex-col bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E6E1] shadow-sm transition-all duration-300 hover:shadow-md hover:translate-y-[-2px]">
+            <div className="flex flex-col bg-white rounded-2xl p-6 sm:p-8 border border-[#E8E6E1] transition-all duration-300 hover:translate-y-[-2px]">
               <div className="mb-4">
                 <div className="flex">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -423,7 +383,7 @@ const Home: React.FC = () => {
               </div>
               
               <div className="flex items-center mt-auto">
-                <div className="w-10 h-10 bg-[#F8F7F2] rounded-full flex items-center justify-center text-[#887D73] font-medium">
+                <div className="w-10 h-10 bg-[#4A7B61]/10 rounded-full flex items-center justify-center text-[#4A7B61] font-medium">
                   ST
                 </div>
                 <div className="ml-3">
@@ -436,10 +396,51 @@ const Home: React.FC = () => {
         </div>
       </section>
       
-      {/* Newsletter container */}
-      <div className="px-6 sm:px-8">
-        <NewsletterSection />
-      </div>
+      {/* Newsletter section */}
+      <section className="py-12 sm:py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl bg-[#F8F7F2] p-6 sm:p-8 lg:p-12 border border-[#E8E6E1]">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+              <div className="mb-6 lg:mb-0 lg:max-w-xl">
+                <div className="inline-flex items-center rounded-full bg-[#4A7B61]/10 px-3 py-1 text-xs font-medium text-[#4A7B61] mb-3 sm:mb-4">
+                  Stay informed
+                </div>
+                
+                <h2 className="text-xl sm:text-2xl font-medium tracking-tight text-[#2C2925] mb-2 sm:mb-3">
+                  Stay connected with our newsletter
+                </h2>
+                
+                <p className="text-sm sm:text-base text-[#706C66] leading-relaxed">
+                  Get weekly updates on new resources, courses, and community conversations.
+                </p>
+              </div>
+              
+              <div className="flex-shrink-0 w-full lg:w-auto">
+                <form className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative rounded-full flex-grow">
+                    <input
+                      type="email"
+                      placeholder="Enter your email"
+                      className="w-full rounded-full border border-[#E8E6E1] bg-white px-4 py-3 text-sm focus:border-[#4A7B61]/50 focus:outline-none focus:ring-1 focus:ring-[#4A7B61]/50 transition-all duration-200 min-h-[44px]"
+                    />
+                  </div>
+                  
+                  <button 
+                    type="submit" 
+                    className="inline-flex items-center justify-center rounded-full bg-[#4A7B61] font-medium px-5 py-2.5 sm:px-6 sm:py-3 text-sm text-white transition-all duration-300 hover:opacity-90 min-h-[44px]"
+                  >
+                    Subscribe
+                  </button>
+                </form>
+                
+                <p className="text-xs text-[#706C66]/80 mt-3 max-w-sm">
+                  By subscribing, you agree to our privacy policy. We'll never share your email.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   );
 };
