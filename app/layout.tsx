@@ -3,6 +3,7 @@ import './globals.css';
 import Sidebar from './components/Sidebar';
 import LoadingState from './components/LoadingState';
 import { AuthProvider } from './context/auth-context';
+import LayoutEffect from './components/LayoutEffect';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -14,16 +15,17 @@ const inter = Inter({
 export const metadata = {
   title: 'Gospel Unbound | Exploring Modern Faith',
   description: 'Progressive Christian perspectives that bridge ancient wisdom with modern understanding through courses, resources and community.',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
   icons: {
     icon: [
       { url: '/favicon.ico' },
     ],
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -47,16 +49,12 @@ export default function RootLayout({
           (function() {
             // Apply immediate layout fixes
             document.documentElement.className += ' js-loaded';
-            
-            // Handle sidebar layout early
-            if (window.innerWidth >= 1024) {
-              document.body.classList.add('has-sidebar');
-            }
           })();
         `}} />
       </head>
       <body className="text-foreground h-full antialiased overflow-x-hidden">
         <AuthProvider>
+          <LayoutEffect />
           <div className="flex h-full bg-background selection:bg-foreground/10 min-h-screen w-full">
             {/* Sidebar */}
             <Sidebar />

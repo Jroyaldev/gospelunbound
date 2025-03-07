@@ -546,7 +546,7 @@ export async function getPosts(
         `
         *,
         profiles:user_id (id, username, full_name, avatar_url),
-        like_count:count_post_likes(*),
+        post_likes(count),
         comments:post_comments(count)
       `,
       )
@@ -562,7 +562,7 @@ export async function getPosts(
     if (error) {
       // If error is related to count functions, fall back to a simpler query
       if (error.code === 'PGRST200' && 
-         (error.message.includes('count_post_likes') || error.message.includes('post_comments'))) {
+         (error.message.includes('post_likes') || error.message.includes('post_comments'))) {
         console.error("Error with count functions, falling back to simple query:", error);
         
         // Fallback query without the count functions
@@ -623,10 +623,10 @@ export async function getPosts(
     return data.map((post) => ({
       ...post,
       author: post.profiles,
-      likes: post.like_count,
+      likes: post.post_likes?.[0]?.count || 0,
       comments: post.comments?.[0]?.count || 0,
       profiles: undefined,
-      like_count: undefined,
+      post_likes: undefined,
     })) as Post[];
   } catch (e) {
     console.error("Exception in getPosts:", e);
@@ -645,7 +645,7 @@ export async function getPost(postId: string): Promise<Post | null> {
         `
         *,
         profiles:user_id (id, username, full_name, avatar_url),
-        like_count:count_post_likes(*),
+        post_likes(count),
         comments:post_comments(count)
       `,
       )
@@ -655,7 +655,7 @@ export async function getPost(postId: string): Promise<Post | null> {
     if (error) {
       // If error is related to count functions, fall back to a simpler query
       if (error.code === 'PGRST200' && 
-         (error.message.includes('count_post_likes') || error.message.includes('post_comments'))) {
+         (error.message.includes('post_likes') || error.message.includes('post_comments'))) {
         console.error("Error with count functions, falling back to simple query:", error);
         
         // Fallback query without the count function
@@ -703,10 +703,10 @@ export async function getPost(postId: string): Promise<Post | null> {
     return {
       ...data,
       author: data.profiles,
-      likes: data.like_count,
+      likes: data.post_likes?.[0]?.count || 0,
       comments: data.comments?.[0]?.count || 0,
       profiles: undefined,
-      like_count: undefined,
+      post_likes: undefined,
     } as Post;
   } catch (e) {
     console.error("Exception in getPost:", e);
@@ -1076,7 +1076,7 @@ export async function getGroups(
         `
         *,
         profiles:created_by_user_id (id, username, full_name, avatar_url),
-        member_count:count_group_members(*)
+        group_members(count)
       `,
       )
       .eq("is_private", false) // Only get public groups in the main listing
@@ -1091,7 +1091,7 @@ export async function getGroups(
 
     if (error) {
       // If error is related to count_group_members, fall back to a simpler query
-      if (error.code === 'PGRST200' && error.message.includes('count_group_members')) {
+      if (error.code === 'PGRST200' && error.message.includes('group_members')) {
         console.error("Error with count_group_members, falling back to simple query:", error);
         
         // Fallback query without the count function
@@ -1145,9 +1145,9 @@ export async function getGroups(
     return data.map((group) => ({
       ...group,
       creator: group.profiles,
-      members: group.member_count,
+      members: group.group_members?.[0]?.count || 0,
       profiles: undefined,
-      member_count: undefined,
+      group_members: undefined,
     })) as Group[];
   } catch (e) {
     console.error("Exception in getGroups:", e);
@@ -1166,7 +1166,7 @@ export async function getGroup(groupId: string): Promise<Group | null> {
         `
         *,
         profiles:created_by_user_id (id, username, full_name, avatar_url),
-        member_count:count_group_members(*)
+        group_members(count)
       `,
       )
       .eq("id", groupId)
@@ -1174,7 +1174,7 @@ export async function getGroup(groupId: string): Promise<Group | null> {
 
     if (error) {
       // If error is related to count_group_members, fall back to a simpler query
-      if (error.code === 'PGRST200' && error.message.includes('count_group_members')) {
+      if (error.code === 'PGRST200' && error.message.includes('group_members')) {
         console.error("Error with count_group_members, falling back to simple query:", error);
         
         // Fallback query without the count function
@@ -1215,9 +1215,9 @@ export async function getGroup(groupId: string): Promise<Group | null> {
     return {
       ...data,
       creator: data.profiles,
-      members: data.member_count,
+      members: data.group_members?.[0]?.count || 0,
       profiles: undefined,
-      member_count: undefined,
+      group_members: undefined,
     } as Group;
   } catch (e) {
     console.error("Exception in getGroup:", e);

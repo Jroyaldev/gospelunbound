@@ -12,6 +12,19 @@ body {
   min-height: 100vh;
 }
 
+/* More targeted text wrapping utilities */
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  word-wrap: break-word;
+}
+
+.community-content {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 /* Ensure sidebar space is reserved even before JS loads */
 body::before {
   content: "";

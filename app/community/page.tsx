@@ -48,15 +48,12 @@ const CommentItem = ({
       console.log(`Comment ${comment.id} by current user:`, {
         isParentComment: isParentComment,
         hasParentId: !!comment.parent_id,
-        content: comment.content?.substring(0, 20) + '...'
       });
     }
-  }, []);
+  }, [comment, isOwnComment, isParentComment]);
   
   // Close options menu when clicking outside
   useEffect(() => {
-    if (!showOptions) return;
-    
     const handleClickOutside = (event: MouseEvent) => {
       if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
         setShowOptions(false);
@@ -67,82 +64,95 @@ const CommentItem = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showOptions]);
+  }, []);
   
+  // Format date as "Mar 7"
   const formattedDate = new Date(comment.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric'
   });
-
+  
   return (
-    <div className={`flex items-start gap-2 p-2 rounded-md transition-colors ${isParentComment ? 'hover:bg-[#4A7B61]/10' : 'ml-8 mt-2 border-l-2 border-[#4A7B61]/20 pl-3'}`}>
-      <img
+    <div className={`flex gap-3 ${!isParentComment ? 'pl-6 border-l border-[#E8E6E1] ml-3' : ''}`}>
+      <img 
         src={comment.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(comment.author?.full_name || 'User')}
         alt={comment.author?.full_name || 'User'}
-        className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-1"
+        className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1]"
       />
-      <div className="flex-1">
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-[#2C2925]">{comment.author?.full_name || 'Anonymous'}</span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[#706C66]">{formattedDate}</span>
-            {isOwnComment && (
-              <div className="relative">
-                <button 
-                  onClick={() => setShowOptions(!showOptions)}
-                  className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-1 rounded-full hover:bg-[#4A7B61]/15"
-                  aria-label="Comment options"
-                >
-                  <MoreVertical size={16} className={isParentComment ? "text-[#58534D]" : ""} />
-                </button>
-                
-                {showOptions && (
-                  <div 
-                    ref={optionsRef}
-                    className="absolute right-0 top-6 bg-white shadow-md rounded-md py-1 z-10 min-w-[120px] border border-[#E8E6E1]"
-                  >
-                    <button
-                      onClick={() => {
-                        onDeleteComment(comment.id);
-                        setShowOptions(false);
-                      }}
-                      className="flex items-center w-full px-3 py-2 text-xs text-left text-red-600 hover:bg-[#4A7B61]/10"
-                    >
-                      <Trash size={14} className="mr-2" />
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="text-sm text-[#706C66] whitespace-pre-wrap mt-1">
-          {isLongComment && !isExpanded
-            ? `${commentContent.substring(0, 200)}...` 
-            : commentContent}
+      
+      <div className="flex-1 min-w-0 overflow-hidden max-w-full">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center flex-wrap gap-1.5">
+              <span className="font-medium text-sm text-[#2C2925] truncate">{comment.author?.full_name || 'User'}</span>
+              <span className="text-xs text-[#706C66] flex-shrink-0">{formattedDate}</span>
+            </div>
             
-          {isLongComment && (
-            <button 
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="ml-1 text-[#4A7B61] hover:text-[#3A6B51] font-medium text-xs"
-            >
-              {isExpanded ? 'Show less' : 'Read more'}
-            </button>
+            <div className="mt-1 text-[15px] text-[#58534D] break-words break-all w-full">
+              {isLongComment && !isExpanded ? (
+                <>
+                  {commentContent.slice(0, 200)}...
+                  <button 
+                    onClick={() => setIsExpanded(true)}
+                    className="text-[#4A7B61] text-sm hover:underline focus:outline-none ml-1"
+                  >
+                    See more
+                  </button>
+                </>
+              ) : (
+                commentContent
+              )}
+            </div>
+            
+            <div className="flex items-center mt-1.5 gap-4">
+              <button 
+                onClick={() => onLikeToggle(comment.id)} 
+                className={`flex items-center gap-1.5 text-xs text-[#706C66] hover:text-[#4A7B61] transition-colors ${comment.has_liked ? 'text-[#4A7B61] font-medium' : ''}`}
+                disabled={!currentUserId}
+              >
+                <Heart size={14} fill={comment.has_liked ? "#4A7B61" : "none"} />
+                <span>{comment.likes || 0}</span>
+              </button>
+              
+              <button 
+                onClick={() => {}} 
+                className="flex items-center gap-1.5 text-xs text-[#706C66] hover:text-[#4A7B61] transition-colors"
+                disabled={!currentUserId}
+              >
+                <Reply size={14} />
+                <span>Reply</span>
+              </button>
+            </div>
+          </div>
+          
+          {isOwnComment && (
+            <div className="relative flex-shrink-0">
+              <button 
+                onClick={() => setShowOptions(!showOptions)}
+                className="p-1 text-[#706C66] hover:text-[#4A7B61] transition-colors rounded-full hover:bg-[#4A7B61]/10"
+              >
+                <MoreVertical size={16} />
+              </button>
+              
+              {showOptions && (
+                <div 
+                  ref={optionsRef}
+                  className="absolute right-0 top-7 bg-white shadow-md rounded-md py-1 z-20 min-w-[120px] border border-[#E8E6E1]"
+                >
+                  <button
+                    onClick={() => {
+                      onDeleteComment(comment.id);
+                      setShowOptions(false);
+                    }}
+                    className="flex items-center w-full px-3 py-2 text-sm text-left text-red-600 hover:bg-[#4A7B61]/10"
+                  >
+                    <Trash size={14} className="mr-2" />
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
           )}
-        </div>
-        <div className="flex items-center mt-1.5 gap-3">
-          <button 
-            onClick={() => currentUserId && onLikeToggle(comment.id)}
-            disabled={!currentUserId}
-            className="flex items-center text-xs text-[#706C66] hover:text-[#4A7B61] transition-colors"
-          >
-            <Heart 
-              size={12} 
-              className={`mr-1 ${comment.has_liked ? "text-[#E74C3C] fill-[#E74C3C]" : ""}`}
-            />
-            {comment.likes || 0} {comment.likes === 1 ? 'like' : 'likes'}
-          </button>
         </div>
       </div>
     </div>
@@ -373,7 +383,7 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
   };
 
   return (
-    <div className="p-5">
+    <div className="p-5 max-w-full">
       <div className="flex items-start gap-4">
         <img
           src={post.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.full_name || 'User')}
@@ -381,16 +391,16 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
           className="w-11 h-11 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1] shadow-sm"
         />
         
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden max-w-full community-content">
           <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center">
-              <span className="text-sm font-medium text-[#2C2925]">{post.author?.full_name || 'Anonymous'}{post.author?.username === 'jonny' && ' (2)'}</span>
-              <span className="mx-2 text-[#E8E6E1]">•</span>
-              <span className="text-xs text-[#706C66]">{formattedDate}</span>
+            <div className="flex items-center overflow-hidden">
+              <span className="text-sm font-medium text-[#2C2925] truncate">{post.author?.full_name || 'Anonymous'}{post.author?.username === 'jonny' && ' (2)'}</span>
+              <span className="mx-2 text-[#E8E6E1] flex-shrink-0">•</span>
+              <span className="text-xs text-[#706C66] flex-shrink-0">{formattedDate}</span>
             </div>
             
             {isOwnPost && (
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <button 
                   onClick={() => setShowOptions(!showOptions)}
                   className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-2 rounded-full hover:bg-[#4A7B61]/15"
@@ -426,14 +436,10 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
             href={`/community/discussions/${post.id}`} 
             className="block group no-underline hover:no-underline focus:no-underline active:no-underline text-inherit"
           >
-            <h3 className="text-lg font-semibold text-[#2C2925] mb-2.5 group-hover:text-[#4A7B61] transition-colors no-underline leading-tight">
-              {post.title}
-            </h3>
+            <h3 className="text-lg font-semibold text-[#2C2925] mb-2.5 group-hover:text-[#4A7B61] transition-colors no-underline leading-tight text-wrap-anywhere">{post.title}</h3>
             
             {post.content && (
-              <p className="text-[15px] text-[#58534D] mb-3.5 line-clamp-2 leading-relaxed no-underline">
-                {post.content}
-              </p>
+              <p className="text-[15px] text-[#58534D] mb-3.5 line-clamp-2 leading-relaxed no-underline text-wrap-anywhere w-full">{post.content}</p>
             )}
           </Link>
           
@@ -449,113 +455,96 @@ const DiscussionCard = ({ post, currentUserId, currentUser, onLikeToggle, onDele
                     onLikeToggle(post.id);
                   }
                 }}
-                className="flex items-center hover:text-[#E74C3C] transition-colors group"
+                className={`flex items-center gap-2 text-[#706C66] hover:text-[#4A7B61] transition-colors ${post.has_liked ? 'text-[#4A7B61]' : ''}`}
+                disabled={!currentUserId}
               >
-                <Heart 
-                  size={18} 
-                  className={`${post.has_liked ? "text-[#E74C3C] fill-[#E74C3C]" : "text-[#706C66] group-hover:text-[#E74C3C]/70"} mr-1.5`}
-                  strokeWidth={post.has_liked ? 0 : 2}
+                <Heart size={18} 
+                  fill={post.has_liked ? "#4A7B61" : "none"} 
+                  className="transition-colors" 
                 />
-                <span className={`text-xs font-medium ${post.has_liked ? "text-[#E74C3C]" : "text-[#706C66] group-hover:text-[#E74C3C]/70"}`}>{post.likes || 0}</span>
+                <span className="text-sm">{post.likes || 0}</span>
               </button>
               
               <button 
                 onClick={toggleComments}
-                className="flex items-center hover:text-[#4A7B61] transition-colors group"
+                className="flex items-center gap-2 text-[#706C66] hover:text-[#4A7B61] transition-colors"
               >
-                <MessageSquare 
-                  size={18} 
-                  className={`text-[#706C66] mr-1.5 group-hover:text-[#4A7B61]/70`} 
-                  strokeWidth={2} 
-                />
-                <span className="text-xs font-medium text-[#706C66] group-hover:text-[#4A7B61]/70">{commentCount}</span>
-                {showComments ? (
-                  <ChevronUp size={16} className="ml-1 text-[#706C66] group-hover:text-[#4A7B61]/70" strokeWidth={2} />
-                ) : (
-                  <ChevronDown size={16} className="ml-1 text-[#706C66] group-hover:text-[#4A7B61]/70" strokeWidth={2} />
-                )}
+                <MessageCircle size={18} className="transition-colors" />
+                <span className="text-sm">{commentCount}</span>
               </button>
             </div>
           </div>
           
           {/* Comments section */}
           {showComments && (
-            <div className="mt-4 pl-2 border-l-2 border-[#4A7B61]/20 animate-fadeIn">
-              {isLoadingComments ? (
-                <div className="py-3 text-center">
-                  <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[#4A7B61] border-t-transparent"></div>
-                  <span className="ml-2 text-sm text-[#706C66]">Loading comments...</span>
-                </div>
-              ) : comments.length === 0 ? (
-                <div className="py-3 text-center text-sm text-[#706C66]">
-                  No comments yet. Be the first to comment!
-                </div>
-              ) : (
-                <div className="relative">
-                  <div 
-                    ref={commentsContainerRef}
-                    className="space-y-4 mb-4 max-h-[400px] overflow-y-auto pr-2 comments-container"
-                    onScroll={checkForMoreComments}
-                  >
-                    {comments.map((comment) => (
+            <div className="mt-4 relative">
+              <div className="border-t border-[#E8E6E1] pt-4">
+                <div 
+                  ref={commentsContainerRef} 
+                  className="comments-container max-h-[400px] overflow-y-auto pr-1 space-y-4"
+                  onScroll={checkForMoreComments}
+                >
+                  {isLoadingComments ? (
+                    <div className="flex justify-center items-center py-6">
+                      <div className="w-5 h-5 border-2 border-[#4A7B61] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : comments.length === 0 ? (
+                    <p className="text-center text-[#706C66] py-6">No comments yet. Be the first to share your thoughts!</p>
+                  ) : (
+                    comments.map(comment => (
                       <CommentItem 
                         key={comment.id} 
                         comment={comment} 
-                        currentUserId={currentUserId} 
+                        currentUserId={currentUserId}
                         onLikeToggle={handleCommentLikeToggle}
                         onDeleteComment={handleDeleteComment}
-                        isParentComment={!comment.parent_id}
                       />
-                    ))}
-                  </div>
-                  {hasMoreComments && (
-                    <>
-                      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#FFFFFF] to-transparent pointer-events-none" aria-hidden="true"></div>
-                      <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none" aria-hidden="true">
-                        <div className="px-2 py-1 bg-[#4A7B61]/15 rounded-full text-xs text-[#4A7B61] shadow-sm">
-                          Scroll for more
-                        </div>
-                      </div>
-                    </>
+                    ))
                   )}
                 </div>
-              )}
-              
-              {/* Add comment form */}
-              {currentUserId ? (
-                <form onSubmit={handleSubmitComment} className="mt-4 mb-1">
-                  <div className="flex items-start gap-2">
+                
+                {/* "More comments" indicator */}
+                {hasMoreComments && (
+                  <div className="absolute bottom-[60px] left-0 w-full flex justify-center">
+                    <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-[#E8E6E1] shadow-sm">
+                      <ChevronDown size={16} className="text-[#58534D] animate-bounce" />
+                    </div>
+                  </div>
+                )}
+                
+                {/* Comment input */}
+                {currentUserId ? (
+                  <form onSubmit={handleSubmitComment} className="mt-4 flex items-center gap-2">
                     <img
                       src={currentUser?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(currentUser?.full_name || 'User')}
                       alt={currentUser?.full_name || 'User'}
-                      className="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-1"
+                      className="w-8 h-8 rounded-full object-cover border border-[#E8E6E1]"
                     />
-                    <div className="flex-1 relative">
-                      <textarea
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
                         placeholder="Add a comment..."
-                        className="w-full border border-[#E8E6E1] rounded-lg p-2 pr-10 text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-[#4A7B61] resize-none min-h-[60px]"
-                      ></textarea>
-                      <button
+                        className="w-full pl-4 pr-10 py-2.5 bg-[#F8F7F4] border border-[#E8E6E1] rounded-full text-sm placeholder-[#A9A6A1] focus:border-[#4A7B61]/50 focus:outline-none focus:ring-1 focus:ring-[#4A7B61]/50 transition-all overflow-hidden text-ellipsis break-words"
+                      />
+                      <button 
                         type="submit"
                         disabled={!commentText.trim()}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4A7B61] hover:text-[#3A6B51] transition-colors disabled:text-[#A9A6A1] disabled:cursor-not-allowed"
-                        aria-label="Send comment"
-                        title="Send comment"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4A7B61] disabled:text-[#A9A6A1] p-1.5 rounded-full hover:bg-[#4A7B61]/10 transition-colors"
                       >
-                        <Send size={16} />
+                        <Send size={18} />
                       </button>
                     </div>
+                  </form>
+                ) : (
+                  <div className="mt-4 bg-[#F8F7F4] py-3 px-4 rounded-lg text-center">
+                    <p className="text-[#58534D] text-sm">
+                      <Link href="/auth/login" className="text-[#4A7B61] font-medium hover:underline">Sign in</Link> to join the conversation.
+                    </p>
                   </div>
-                </form>
-              ) : (
-                <div className="mt-3 mb-1 p-2 bg-[#4A7B61]/15 rounded-lg text-center text-sm">
-                  <Link href="/auth/signin" className="text-[#4A7B61] font-medium hover:underline">
-                    Sign in to add a comment
-                  </Link>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -979,7 +968,7 @@ const CommunityPage = (): JSX.Element => {
                 <span className="ml-3 text-[#706C66]">Loading...</span>
               </div>
             ) : activeTab === 'discussions' ? (
-              <div className="mt-6 grid gap-6">
+              <div className="mt-6 grid gap-6 max-w-full">
                 {posts.length === 0 ? (
                   <div className="text-center py-10 bg-[#F8F7F4] rounded-lg">
                     <h3 className="text-[#58534D] text-lg font-medium mb-2">No discussions yet</h3>
@@ -1007,11 +996,11 @@ const CommunityPage = (): JSX.Element => {
                 )}
               </div>
             ) : (
-              <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-full">
                 {groups.length === 0 ? (
-                  <div className="sm:col-span-2 lg:col-span-3 text-center py-10 bg-[#F8F7F4] rounded-lg">
-                    <h3 className="text-[#58534D] text-lg font-medium mb-2">No groups available</h3>
-                    <p className="text-[#706C66] mb-6">Create a new group or check back later!</p>
+                  <div className="col-span-full text-center py-10 bg-[#F8F7F4] rounded-lg">
+                    <h3 className="text-[#58534D] text-lg font-medium mb-2">No groups yet</h3>
+                    <p className="text-[#706C66] mb-6">Why not create the first one?</p>
                     <button 
                       onClick={() => router.push('/community/create-group')}
                       className="inline-flex items-center px-4 py-2 bg-[#4A7B61] text-white rounded-lg hover:bg-[#3A6B51] transition-colors"
