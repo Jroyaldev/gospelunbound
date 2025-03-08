@@ -531,6 +531,10 @@ export async function trackLessonView(
 // Community functions
 
 // Posts
+/**
+ * Fetches posts with optimized query strategy to reduce database calls
+ * Returns array of posts with author details, like counts, and comment counts
+ */
 export async function getPosts(
   limit: number = 10,
   offset: number = 0,
@@ -540,7 +544,7 @@ export async function getPosts(
   const supabase = await createClient();
 
   try {
-    // Try the original query with the count functions
+    // Main query with all post data, author profiles, and counts
     let query = supabase
       .from("posts")
       .select(
@@ -561,116 +565,121 @@ export async function getPosts(
     const { data, error } = await query;
 
     if (error) {
-      // If error is related to count functions, fall back to a simpler query
-      if (error.code === 'PGRST200' && 
-         (error.message.includes('post_likes') || error.message.includes('post_comments'))) {
-        console.error("Error with count functions, falling back to simple query:", error);
-        
-        // Fallback query without the count functions
-        let fallbackQuery = supabase
-          .from("posts")
-          .select(
-            `
-            *,
-            profiles:user_id (id, username, full_name, avatar_url)
-          `,
-          )
-          .order("created_at", { ascending: false })
-          .range(offset, offset + limit - 1);
+      // Optimized fallback approach - get posts and counts in batch operations
+      console.error("Error with count functions, using optimized fallback:", error);
+      
+      // 1. Get base posts data
+      let fallbackQuery = supabase
+        .from("posts")
+        .select(
+          `
+          *,
+          profiles:user_id (id, username, full_name, avatar_url)
+        `,
+        )
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
 
-        if (category) {
-          fallbackQuery = fallbackQuery.eq("category", category);
-        }
+      if (category) {
+        fallbackQuery = fallbackQuery.eq("category", category);
+      }
 
-        const fallbackResult = await fallbackQuery;
-        
-        if (fallbackResult.error) {
-          console.error("Error in fallback query:", fallbackResult.error);
-          return [];
-        }
-        
-        // For each post, get the counts separately
-        const postsWithCounts = await Promise.all(
-          fallbackResult.data.map(async (post) => {
-            // Get like count
-            const { count: likeCount, error: likeCountError } = await supabase
-              .from("post_likes")
-              .select("*", { count: "exact", head: true })
-              .eq("post_id", post.id);
-            
-            // Get comment count
-            const { count: commentCount, error: commentCountError } = await supabase
-              .from("post_comments")
-              .select("*", { count: "exact", head: true })
-              .eq("post_id", post.id);
-              
-            // Check if current user has liked this post
-            let hasLiked = false;
-            if (userId) {
-              const { data: likeData, error: likeError } = await supabase
-                .from("post_likes")
-                .select("id")
-                .eq("user_id", userId)
-                .eq("post_id", post.id)
-                .maybeSingle();
-                
-              if (!likeError) {
-                hasLiked = !!likeData;
-              }
-            }
-              
-            return {
-              ...post,
-              author: post.profiles,
-              likes: likeCountError ? 0 : (likeCount || 0),
-              comments: commentCountError ? 0 : (commentCount || 0),
-              has_liked: hasLiked,
-              profiles: undefined,
-            };
-          })
-        );
-        
-        return postsWithCounts as Post[];
+      const fallbackResult = await fallbackQuery;
+      
+      if (fallbackResult.error) {
+        console.error("Error in fallback query:", fallbackResult.error);
+        return [];
       }
       
-      console.error("Error fetching posts:", error);
-      return [];
+      if (!fallbackResult.data.length) {
+        return [];
+      }
+      
+      // 2. Extract all post IDs for batch operations
+      const postIds = fallbackResult.data.map(post => post.id);
+      
+      // 3. Get all likes counts in one query
+      const { data: allLikes, error: likesError } = await supabase
+        .from("post_likes")
+        .select("post_id, id")
+        .in("post_id", postIds);
+        
+      // 4. Get all comments counts in one query  
+      const { data: allComments, error: commentsError } = await supabase
+        .from("post_comments")
+        .select("post_id, id")
+        .in("post_id", postIds);
+        
+      // 5. If user is logged in, get all their likes in one query
+      let userLikes: Record<string, boolean> = {};
+      if (userId) {
+        const { data: userLikesData, error: userLikesError } = await supabase
+          .from("post_likes")
+          .select("post_id")
+          .eq("user_id", userId)
+          .in("post_id", postIds);
+          
+        if (!userLikesError && userLikesData) {
+          userLikes = userLikesData.reduce((acc, like) => {
+            acc[like.post_id] = true;
+            return acc;
+          }, {} as Record<string, boolean>);
+        }
+      }
+      
+      // 6. Count likes and comments by post_id
+      const likesByPostId: Record<string, number> = {};
+      const commentsByPostId: Record<string, number> = {};
+      
+      if (!likesError && allLikes) {
+        allLikes.forEach(like => {
+          likesByPostId[like.post_id] = (likesByPostId[like.post_id] || 0) + 1;
+        });
+      }
+      
+      if (!commentsError && allComments) {
+        allComments.forEach(comment => {
+          commentsByPostId[comment.post_id] = (commentsByPostId[comment.post_id] || 0) + 1;
+        });
+      }
+      
+      // 7. Combine all data
+      const postsWithAll = fallbackResult.data.map(post => ({
+        ...post,
+        author: post.profiles,
+        likes: likesByPostId[post.id] || 0,
+        comments: commentsByPostId[post.id] || 0,
+        has_liked: !!userLikes[post.id],
+        profiles: undefined,
+      }));
+      
+      return postsWithAll as Post[];
     }
 
-    // Process the regular query results
-    const processedPosts = data.map((post) => ({
-      ...post,
-      author: post.profiles,
-      likes: post.post_likes?.[0]?.count || 0,
-      comments: post.comments?.[0]?.count || 0,
-      profiles: undefined,
-      post_likes: undefined,
-    })) as Post[];
-    
-    // If userId is provided, check which posts the user has liked
-    if (userId) {
-      const postsWithLikeStatus = await Promise.all(
-        processedPosts.map(async (post) => {
-          const { data: likeData, error: likeError } = await supabase
-            .from("post_likes")
-            .select("id")
-            .eq("user_id", userId)
-            .eq("post_id", post.id)
-            .maybeSingle();
-            
-          return {
-            ...post,
-            has_liked: likeError ? false : !!likeData
-          };
-        })
-      );
-      
-      return postsWithLikeStatus;
-    }
-    
-    return processedPosts;
-  } catch (e) {
-    console.error("Exception in getPosts:", e);
+    // Process the successful result
+    const processedPosts = await Promise.all(
+      data.map(async (post) => {
+        // Check if current user has liked this post
+        let hasLiked = false;
+        if (userId) {
+          hasLiked = await isPostLikedByUser(userId, post.id);
+        }
+
+        return {
+          ...post,
+          author: post.profiles,
+          likes: post.post_likes?.length ? post.post_likes[0].count : 0,
+          comments: post.comments?.length ? post.comments[0].count : 0,
+          has_liked: hasLiked,
+          profiles: undefined,
+          post_likes: undefined,
+        };
+      }),
+    );
+
+    return processedPosts as Post[];
+  } catch (error) {
+    console.error("Error in getPosts:", error);
     return [];
   }
 }
@@ -911,6 +920,13 @@ export async function deletePost(
   return true;
 }
 
+/**
+ * Toggle like on a post
+ * @param userId - ID of the user performing the like action
+ * @param postId - ID of the post being liked or unliked  
+ * @param skipRevalidation - Whether to skip path revalidation (default: false)
+ * @returns True if the operation was successful, false otherwise
+ */
 export async function togglePostLike(
   userId: string,
   postId: string,
@@ -1020,58 +1036,49 @@ export async function createPostComment(
 ): Promise<PostComment | null> {
   const supabase = await createClient();
 
-  if (!comment.content || !comment.post_id) {
-    console.error("Comment content and post_id are required");
-    return null;
-  }
+  try {
+    const { post_id, content, parent_id } = comment;
 
-  // Insert the comment
-  const { data: newComment, error } = await supabase
-    .from("post_comments")
-    .insert({
-      user_id: userId,
-      post_id: comment.post_id,
-      content: comment.content,
-      parent_id: comment.parent_id,
-    })
-    .select()
-    .single();
+    const { data, error } = await supabase
+      .from("post_comments")
+      .insert({
+        user_id: userId,
+        post_id,
+        content,
+        parent_id
+      })
+      .select(`
+        id,
+        post_id,
+        user_id,
+        content,
+        parent_id,
+        created_at,
+        updated_at,
+        author:user_id(
+          id,
+          username,
+          full_name,
+          avatar_url
+        )
+      `)
+      .single();
 
-  if (error) {
+    if (error) throw error;
+
+    // Revalidate paths
+    revalidatePath(`/community/discussions/${post_id}`);
+    revalidatePath('/community');
+
+    // Use type assertion to handle the author property
+    return {
+      ...data,
+      author: data.author as any
+    };
+  } catch (error) {
     console.error("Error creating comment:", error);
     return null;
   }
-
-  // Update user engagement metrics
-  try {
-    await supabase.rpc("update_user_engagement", {
-      p_user_id: userId,
-      p_comments_created: 1,
-    });
-  } catch (err) {
-    console.error("Error updating user engagement:", err);
-  }
-
-  // Fetch the user profile to include with the comment
-  const { data: profileData, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, username, full_name, avatar_url")
-    .eq("id", userId)
-    .single();
-
-  if (profileError) {
-    console.error("Error fetching user profile:", profileError);
-  }
-
-  // Revalidate paths to update UI
-  revalidatePath(`/community/discussions/${comment.post_id}`);
-  revalidatePath('/community');
-  
-  // Return the comment with author profile data
-  return {
-    ...newComment,
-    author: profileError ? undefined : profileData,
-  } as PostComment;
 }
 
 export async function deletePostComment(
@@ -1467,6 +1474,13 @@ export async function getGroupMembers(groupId: string): Promise<any[]> {
 }
 
 // Comment Likes
+/**
+ * Toggle like on a comment
+ * @param userId - ID of the user performing the like action
+ * @param commentId - ID of the comment being liked or unliked
+ * @param skipRevalidation - Whether to skip path revalidation (default: false)
+ * @returns True if the operation was successful, false otherwise
+ */
 export async function toggleCommentLike(
   userId: string,
   commentId: string,
@@ -1474,15 +1488,15 @@ export async function toggleCommentLike(
 ): Promise<boolean> {
   const supabase = await createClient();
 
-  // Check if like exists
-  const { data: existingLike, error: checkError } = await supabase
-    .from("comment_likes")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("comment_id", commentId)
-    .single();
-
   try {
+    // Check if like exists
+    const { data: existingLike, error: checkError } = await supabase
+      .from("comment_likes")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("comment_id", commentId)
+      .single();
+
     if (existingLike) {
       // Unlike
       const { error } = await supabase
@@ -1503,6 +1517,7 @@ export async function toggleCommentLike(
 
     // Revalidate paths only if not skipped
     if (!skipRevalidation) {
+      // Get post_id for this comment (either direct comment or reply)
       const { data: comment } = await supabase
         .from("post_comments")
         .select("post_id")
@@ -1541,4 +1556,34 @@ export async function isCommentLikedByUser(
   }
 
   return !!data;
+}
+
+/**
+ * Optimized function to check if a user is a member of multiple groups in one query
+ * Returns a Set of group IDs the user is a member of
+ */
+export async function getUserGroupMemberships(userId: string, groupIds: string[]): Promise<Set<string>> {
+  if (!userId || !groupIds.length) {
+    return new Set();
+  }
+
+  const supabase = await createClient();
+  
+  try {
+    const { data, error } = await supabase
+      .from("group_members")
+      .select("group_id")
+      .eq("user_id", userId)
+      .in("group_id", groupIds);
+      
+    if (error) {
+      console.error("Error getting user group memberships:", error);
+      return new Set();
+    }
+    
+    return new Set(data.map(membership => membership.group_id));
+  } catch (error) {
+    console.error("Error in getUserGroupMemberships:", error);
+    return new Set();
+  }
 }

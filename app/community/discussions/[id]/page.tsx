@@ -1,14 +1,26 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Heart, Send, MoreVertical, Trash } from 'lucide-react';
-import { getPost, getPostComments, createPostComment, togglePostLike, isPostLikedByUser, getProfile, deletePost } from '@/app/lib/supabase/database';
+import { getPost, getPostComments, createPostComment, togglePostLike, isPostLikedByUser, getProfile, deletePost, toggleCommentLike, deletePostComment } from '@/app/lib/supabase/database';
 import { useAuth } from '@/app/context/auth-context';
-import type { Post, PostComment, UserProfile } from '@/app/types/database';
+import type { Post, UserProfile } from '@/app/types/database';
 import { createClient } from '@/app/lib/supabase/client';
+import { PostComment } from '@/app/types/community';
+import CommentItem from '@/app/components/community/CommentItem';
 
+/**
+ * PostPage displays an individual discussion post with its comments
+ * 
+ * Features:
+ * - Detailed view of a single post
+ * - Comments section with ability to add/like/delete comments
+ * - Post like functionality
+ * - Delete option for post owner
+ * - Back navigation to community page
+ */
 export default function PostPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -37,10 +49,12 @@ export default function PostPage() {
     };
   }, []);
 
-  useEffect(() => {
+  /**
+   * Fetch post, comments, and user data
+   */
+  const fetchData = useCallback(async () => {
     if (authLoading) return;
     
-    const fetchData = async () => {
       setIsLoading(true);
 
       try {
@@ -48,100 +62,439 @@ export default function PostPage() {
         setPost(postData);
         
         if (postData) {
-          const commentsData = await getPostComments(postId);
-          // Using type assertion to match types
-          setComments(commentsData as unknown as PostComment[]);
+        if (user) {
+          setHasLiked(await isPostLikedByUser(user.id, postData.id));
+          const profileData = await getProfile(user.id);
+          setUserProfile(profileData);
+        }
+        
+        const commentsData = await getPostComments(postData.id);
+        
+        // If user is logged in, check if they've liked each comment
+        if (user) {
+          const supabase = await createClient();
           
-          if (user && postData.has_liked !== undefined) {
-            setHasLiked(postData.has_liked);
+          // First, let's collect all comment IDs (both main comments and replies)
+          const getAllCommentIds = (comments: any[]): string[] => {
+            let ids: string[] = [];
+            comments.forEach(comment => {
+              ids.push(comment.id);
+              // If we ever add nested replies, we'd collect their IDs here too
+            });
+            return ids;
+          };
+          
+          const commentIds = getAllCommentIds(commentsData);
+          
+          // Batch query for all likes by current user
+          const { data: userLikes, error } = await supabase
+            .from('comment_likes')
+            .select('comment_id')
+            .eq('user_id', user.id)
+            .in('comment_id', commentIds);
+              
+          if (error) {
+            console.error('Error getting comment likes:', error);
+          } else {
+            // Create a set of liked comment IDs for fast lookups
+            const likedCommentIds = new Set(userLikes.map(like => like.comment_id));
+              
+            // Get comment like counts in one query - using count directly without group
+            const likeCountMap: Record<string, number> = {};
+              
+            // Fetch counts for each comment separately since group() is causing issues
+            await Promise.all(commentIds.map(async (commentId) => {
+              const { count, error: countError } = await supabase
+                .from('comment_likes')
+                .select('*', { count: 'exact', head: true })
+                .eq('comment_id', commentId);
+                  
+              if (!countError) {
+                likeCountMap[commentId] = count || 0;
+              }
+            }));
+
+            // Process all comments to add likes info
+            const processCommentLikes = (comments: any[]): any[] => {
+              return comments.map(comment => {
+                const enhancedComment = {
+                  ...comment,
+                  has_liked: likedCommentIds.has(comment.id),
+                  likes: likeCountMap[comment.id] || 0,
+                  // If we ever add nested replies, we'd process them here
+                };
+                return enhancedComment;
+              });
+            };
+            
+            // Process all comments
+            const processedComments = processCommentLikes(commentsData);
+            
+            // Organize comments with replies structure
+            const parentComments: PostComment[] = [];
+            const replyMap: Record<string, PostComment[]> = {};
+              
+            // First pass: identify all parent comments and replies
+            processedComments.forEach(comment => {
+              if (comment.parent_id) {
+                // This is a reply
+                if (!replyMap[comment.parent_id]) {
+                  replyMap[comment.parent_id] = [];
+                }
+                replyMap[comment.parent_id].push({...comment, replies: []});
+              } else {
+                // This is a parent comment
+                parentComments.push({...comment, replies: []});
+              }
+            });
+              
+            // Second pass: attach replies to parent comments
+            parentComments.forEach(parentComment => {
+              if (replyMap[parentComment.id]) {
+                parentComment.replies = replyMap[parentComment.id];
+              }
+            });
+              
+            setComments(parentComments);
+          }
+        } else {
+          // If not logged in, just organize the comments without like info
+          const parentComments: PostComment[] = [];
+          const replyMap: Record<string, PostComment[]> = {};
+              
+          commentsData.forEach(comment => {
+            if (comment.parent_id) {
+              // This is a reply
+              if (!replyMap[comment.parent_id]) {
+                replyMap[comment.parent_id] = [];
+              }
+              replyMap[comment.parent_id].push({...comment, replies: []} as PostComment);
+            } else {
+              // This is a parent comment
+              parentComments.push({...comment, replies: []} as PostComment);
+            }
+          });
+              
+          // Attach replies to parent comments
+          parentComments.forEach(parentComment => {
+            if (replyMap[parentComment.id]) {
+              parentComment.replies = replyMap[parentComment.id];
+            }
+          });
+              
+          setComments(parentComments);
           }
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+      console.error('Error fetching post data:', error);
       } finally {
         setIsLoading(false);
       }
-    };
+  }, [authLoading, postId, user]);
     
+  // Initial data fetch
+  useEffect(() => {
     fetchData();
-  }, [postId, user, authLoading]);
-  
-  // Check if user is the author of the post
-  const isOwnPost = user && post && post.author?.id === user.id;
+  }, [fetchData]);
 
+  /**
+   * Handle post like toggle with optimistic update
+   */
   const handleLikeToggle = async () => {
-    if (!user) return;
+    if (!user || !post) return;
     
-    // Optimistically update UI
-    setHasLiked(!hasLiked);
-    if (post) {
-      setPost({
-        ...post,
-        likes: (post.likes || 0) + (hasLiked ? -1 : 1)
+    // Optimistic update
+    const newLikedStatus = !hasLiked;
+    setHasLiked(newLikedStatus);
+    setPost(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        likes: (prev.likes || 0) + (newLikedStatus ? 1 : -1)
+      };
+    });
+    
+    // API update
+    try {
+      // Use skipRevalidation=true and rely on optimistic updates instead of refetching
+      await togglePostLike(user.id, post.id, true);
+      
+      // No need to refetch data - the optimistic update is sufficient
+      // and the change will persist in the database
+    } catch (error) {
+      console.error('Error toggling post like:', error);
+      // Revert optimistic update on error
+      setHasLiked(!newLikedStatus);
+      setPost(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          likes: (prev.likes || 0) + (newLikedStatus ? -1 : 1)
+        };
       });
     }
-    
-    try {
-      // Skip revalidation to prevent page refresh, since we're already updating the UI optimistically
-      await togglePostLike(user.id, postId, true);
-    } catch (error) {
-      console.error('Error toggling like:', error);
-      // Revert the optimistic update
-      setHasLiked(hasLiked);
-      if (post) {
-        setPost({
-          ...post,
-          likes: (post.likes || 0) + (hasLiked ? 0 : -1)
-        });
-      }
-    }
   };
-  
+
+  /**
+   * Handle post deletion
+   */
   const handleDeletePost = async () => {
-    if (!user || !post || !postId) return;
+    if (!user || !post) return;
     
     try {
-      const success = await deletePost(user.id, postId);
-      if (success) {
-        // Redirect to community page
+      await deletePost(post.id, user.id);
         router.push('/community');
-      } else {
-        console.error('Failed to delete post');
-      }
     } catch (error) {
       console.error('Error deleting post:', error);
     }
   };
 
+  /**
+   * Handle comment creation
+   */
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !commentText.trim()) return;
+    if (!user || !commentText.trim() || !post) return;
     
     try {
       const newComment = await createPostComment(user.id, {
-        post_id: postId,
+        post_id: post.id,
         content: commentText.trim()
       });
       
       if (newComment) {
-        // Using type assertion to handle the type mismatch
-        setComments(prev => [...prev, newComment as unknown as PostComment]);
+        // Add the new comment to the list with author info
+        const commentWithAuthor = {
+          ...newComment,
+          has_liked: false,
+          likes: 0,
+          replies: [],
+          author: {
+            id: user.id,
+            username: userProfile?.username,
+            full_name: userProfile?.full_name || user.email?.split('@')[0] || 'User',
+            avatar_url: userProfile?.avatar_url,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        };
+        
+        setComments(prev => [...prev, commentWithAuthor as PostComment]);
         setCommentText('');
+        
+        // Update post comment count
+        setPost(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            comments: (prev.comments || 0) + 1
+          };
+        });
       }
     } catch (error) {
       console.error('Error creating comment:', error);
     }
   };
 
+  /**
+   * Handle reply to comment
+   */
+  const handleReplyToComment = async (parentId: string, content: string) => {
+    if (!user || !content.trim() || !post) return;
+    
+    try {
+      const newReply = await createPostComment(user.id, {
+        post_id: post.id,
+        content: content.trim(),
+        parent_id: parentId
+      });
+      
+      if (newReply) {
+        // Add reply with author info - use type assertion to handle author property
+        const replyWithAuthor = {
+          ...newReply,
+          has_liked: false,
+          likes: 0,
+          author: {
+            id: user.id,
+            username: userProfile?.username,
+            full_name: userProfile?.full_name || user.email?.split('@')[0] || 'User',
+            avatar_url: userProfile?.avatar_url,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          } as any // Use type assertion here
+        } as PostComment;
+        
+        // Update comments with the new reply
+        setComments(prevComments => {
+          return prevComments.map(comment => {
+            if (comment.id === parentId) {
+              // Add reply to parent comment
+              return {
+                ...comment,
+                replies: [...(comment.replies || []), replyWithAuthor]
+              };
+            }
+            return comment;
+          });
+        });
+        
+        // Update post comment count
+        setPost(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            comments: (prev.comments || 0) + 1
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error creating reply:', error);
+    }
+  };
+
+  /**
+   * Handle comment like toggle with optimistic update
+   */
+  const handleCommentLikeToggle = async (commentId: string) => {
+    if (!user) return;
+    
+    console.log(`Toggle like for comment: ${commentId}`);
+    
+    // Helper to find and update comment in the nested structure
+    const updateCommentLikeStatus = (comments: PostComment[], commentId: string, newLikeStatus: boolean): PostComment[] => {
+      return comments.map(comment => {
+        if (comment.id === commentId) {
+          // Update this comment
+          console.log(`Found comment to update: ${comment.id}, current like status: ${comment.has_liked}, new like status: ${newLikeStatus}`);
+          return {
+            ...comment,
+            has_liked: newLikeStatus,
+            likes: (comment.likes || 0) + (newLikeStatus ? 1 : -1)
+          };
+        } else if (comment.replies && comment.replies.length > 0) {
+          // Check replies
+          return {
+            ...comment,
+            replies: updateCommentLikeStatus(comment.replies, commentId, newLikeStatus)
+          };
+        }
+        return comment;
+      });
+    };
+    
+    // Find the comment to update
+    const findComment = (comments: PostComment[], commentId: string): PostComment | null => {
+      for (const comment of comments) {
+        if (comment.id === commentId) {
+          return comment;
+        }
+        if (comment.replies) {
+          const found = findComment(comment.replies, commentId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const commentToUpdate = findComment(comments, commentId);
+    if (!commentToUpdate) {
+      console.error(`Comment with ID ${commentId} not found`);
+      return;
+    }
+    
+    const currentLikeStatus = commentToUpdate.has_liked || false;
+    const newLikeStatus = !currentLikeStatus;
+    
+    console.log(`Toggling like for comment ${commentId}: ${currentLikeStatus} -> ${newLikeStatus}`);
+    
+    // Optimistic update
+    setComments(prev => updateCommentLikeStatus(prev, commentId, newLikeStatus));
+    
+    // API update
+    try {
+      console.log(`Calling API to toggle like for comment ${commentId}`);
+      const result = await toggleCommentLike(user.id, commentId, true);
+      console.log(`API result for toggling like: ${result}`);
+      
+      if (!result) {
+        console.error(`Error toggling comment like: API returned false`);
+        // Revert optimistic update on error
+        setComments(prev => updateCommentLikeStatus(prev, commentId, currentLikeStatus));
+      }
+    } catch (error) {
+      console.error('Error toggling comment like:', error);
+      // Revert optimistic update on error
+      setComments(prev => updateCommentLikeStatus(prev, commentId, currentLikeStatus));
+    }
+  };
+
+  /**
+   * Handle comment deletion
+   */
+  const handleDeleteComment = async (commentId: string) => {
+    if (!user) return;
+    
+    // Helper to filter out the deleted comment from the nested structure
+    const filterDeletedComment = (comments: PostComment[], commentId: string): [PostComment[], boolean] => {
+      let deleted = false;
+      
+      // First check if it's a top-level comment
+      const filteredComments = comments.filter(comment => {
+        if (comment.id === commentId) {
+          deleted = true;
+          return false;
+        }
+        return true;
+      });
+      
+      // If not found at top level, check in replies
+      if (!deleted) {
+        return [comments.map(comment => {
+          if (comment.replies && comment.replies.length > 0) {
+            const [updatedReplies, wasDeleted] = filterDeletedComment(comment.replies, commentId);
+            if (wasDeleted) {
+              deleted = true;
+              return { ...comment, replies: updatedReplies };
+            }
+          }
+          return comment;
+        }), deleted];
+      }
+      
+      return [filteredComments, deleted];
+    };
+    
+    // Optimistic update
+    const [updatedComments, deleted] = filterDeletedComment(comments, commentId);
+    if (deleted) {
+      setComments(updatedComments);
+      
+      // Update post comment count
+      setPost(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          comments: Math.max((prev.comments || 0) - 1, 0)
+        };
+      });
+    }
+    
+    // API update
+    try {
+      await deletePostComment(user.id, commentId);
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      // Revert optimistic update on error
+      fetchData();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3 mb-8"></div>
-          <div className="h-32 bg-gray-200 rounded mb-8"></div>
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#4A7B61]"></div>
         </div>
       </div>
     );
@@ -149,54 +502,35 @@ export default function PostPage() {
 
   if (!post) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 text-center">
-        <h1 className="text-2xl font-bold mb-4">Post Not Found</h1>
-        <p className="mb-6">The post you're looking for might have been removed or doesn't exist.</p>
-        <Link href="/community" className="text-[#4A7B61] font-medium hover:text-[#58534D] transition-colors no-underline px-4 py-2 rounded-full bg-[#F8F7F2]">
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-[#2C2925] mb-2">Post not found</h2>
+          <Link 
+            href="/community" 
+            className="inline-flex items-center text-[#4A7B61] hover:underline mt-2"
+          >
+            <ArrowLeft size={16} className="mr-1" />
           Back to Community
         </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#F8F7F2] min-h-screen pb-16">
-      {/* Header with back button */}
-      <div className="relative rounded-b-2xl overflow-hidden mb-6 border-b border-[#4A7B61]/20">
-        <div className="absolute inset-0 bg-[#4A7B61]/15"></div>
-        <div className="max-w-3xl mx-auto px-4 py-4 sm:px-6 relative z-10">
-          <div className="flex items-center">
-            <button 
-              onClick={() => router.push('/community')} 
-              className="inline-flex items-center text-[#2C2925] hover:text-[#4A7B61] transition-colors mr-4"
-              aria-label="Back to community"
-            >
-              <ArrowLeft size={20} strokeWidth={1.5} />
-              <span className="ml-2 font-medium">Back</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {isLoading ? (
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex justify-center items-center py-20">
-          <div className="w-10 h-10 border-4 border-[#4A7B61]/30 border-t-[#4A7B61] rounded-full animate-spin"></div>
-        </div>
-      ) : !post ? (
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20 text-center">
-          <h1 className="text-2xl font-semibold text-[#2C2925] mb-4">Post not found</h1>
-          <p className="text-[#706C66] mb-6">The post you're looking for doesn't exist or has been removed.</p>
-          <Link href="/community" className="inline-flex items-center px-4 py-2 bg-[#4A7B61] text-white rounded-full hover:bg-[#3A6B51] transition-colors">
-            <ArrowLeft size={16} className="mr-2" />
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <Link 
+        href="/community" 
+        className="inline-flex items-center text-[#4A7B61] hover:underline mb-6"
+      >
+        <ArrowLeft size={16} className="mr-1" />
             Back to Community
           </Link>
-        </div>
-      ) : (
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          {/* Post content */}
-          <div className="bg-white rounded-xl border border-[#E8E6E1] p-6 mb-6">
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-3">
+      
+      <div className="bg-white rounded-lg border border-[#E8E6E1] shadow-sm overflow-hidden">
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start gap-4">
                 <img
                   src={post.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.full_name || 'User')}
                   alt={post.author?.full_name || 'User'}
@@ -204,38 +538,38 @@ export default function PostPage() {
                 />
                 
                 <div>
-                  <div className="font-medium">{post.author?.full_name || 'Anonymous'}</div>
-                  <div className="text-sm text-[#706C66]">
+                <h2 className="font-semibold text-[#2C2925]">{post.author?.full_name || 'User'}</h2>
+                <p className="text-sm text-[#706C66]">
                     {new Date(post.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </div>
-                </div>
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </p>
+              </div>
               </div>
               
-              {isOwnPost && (
+            {user && post.author?.id === user.id && (
                 <div className="relative">
                   <button 
                     onClick={() => setShowOptions(!showOptions)}
-                    className="text-[#706C66] hover:text-[#4A7B61] transition-colors p-2 rounded-full hover:bg-[#4A7B61]/15"
+                  className="text-[#706C66] p-2 rounded-full hover:bg-gray-100"
                     aria-label="Post options"
                   >
-                    <MoreVertical size={16} className="text-[#58534D]" />
+                  <MoreVertical size={20} />
                   </button>
                   
                   {showOptions && (
                     <div 
                       ref={optionsRef}
-                      className="absolute right-0 top-8 bg-white shadow-md rounded-md py-1 z-10 min-w-[140px] border border-[#E8E6E1]"
+                    className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg border border-[#E8E6E1] z-10"
                     >
                       <button
                         onClick={handleDeletePost}
-                        className="flex items-center w-full px-4 py-3 text-sm text-left text-red-600 hover:bg-[#4A7B61]/10"
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
                       >
-                        <Trash size={16} className="mr-2" />
-                        Delete
+                      <Trash size={16} />
+                      <span>Delete Post</span>
                       </button>
                     </div>
                   )}
@@ -243,114 +577,87 @@ export default function PostPage() {
               )}
             </div>
             
-            {post.category && (
-              <div className="mb-3">
-                <span className="inline-block text-xs px-3 py-1 bg-[#4A7B61]/15 rounded-full text-[#4A7B61] font-medium border border-[#4A7B61]/20">{post.category}</span>
-              </div>
-            )}
-            
-            <h1 className="text-2xl font-semibold mb-4 text-[#2C2925]">{post.title}</h1>
-            
-            <div className="text-[#2C2925] mb-6 whitespace-pre-wrap">
+          <h1 className="text-2xl font-bold text-[#2C2925] mb-4">{post.title}</h1>
+          
+          {post.content && (
+            <div className="text-[#58534D] mb-6 leading-relaxed whitespace-pre-wrap">
               {post.content}
             </div>
+          )}
             
-            <div className="flex items-center pt-4 border-t border-[#E8E6E1]/60">
+          <div className="flex items-center pt-4 border-t border-[#E8E6E1]">
               <button 
                 onClick={handleLikeToggle}
                 disabled={!user}
-                className="flex items-center mr-6 hover:text-[#E74C3C] transition-colors group"
-              >
-                <Heart 
-                  size={18} 
-                  className={`${hasLiked ? "text-[#E74C3C] fill-[#E74C3C]" : "text-[#706C66] group-hover:text-[#E74C3C]/70"} mr-2`}
-                  strokeWidth={hasLiked ? 0 : 2}
-                />
-                <span className={`${hasLiked ? "text-[#E74C3C]" : "text-[#706C66] group-hover:text-[#E74C3C]/70"}`}>{post.likes || 0} likes</span>
+              className={`flex items-center gap-2 ${hasLiked ? 'text-red-500' : 'text-[#706C66]'} ${!user ? 'opacity-50 cursor-not-allowed' : 'hover:text-red-500'}`}
+            >
+              <Heart size={20} fill={hasLiked ? 'currentColor' : 'none'} />
+              <span>{post.likes || 0}</span>
               </button>
-              
-              <div className="text-[#706C66]">
-                {comments.length} comments
-              </div>
-            </div>
           </div>
+        </div>
+        
+        <div className="border-t border-[#E8E6E1] p-6">
+          <h3 className="text-lg font-semibold text-[#2C2925] mb-4">
+            Comments ({post.comments || comments.length || 0})
+          </h3>
           
-          {/* Comments section */}
-          <div className="bg-white rounded-xl border border-[#E8E6E1] p-6">
-            <h2 className="text-lg font-semibold mb-6 text-[#2C2925]">Comments</h2>
-            
-            {comments.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4A7B61]/15 text-[#4A7B61] mb-4">
-                  <Send size={24} strokeWidth={1.5} />
-                </div>
-                <h3 className="text-lg font-medium text-[#2C2925] mb-2">No comments yet</h3>
-                <p className="text-[#706C66] mb-4">Be the first to join the conversation</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="border-b border-[#E8E6E1]/60 pb-4 last:border-b-0">
+          {user ? (
+            <form onSubmit={handleSubmitComment} className="mb-6">
                     <div className="flex items-start gap-3">
                       <img
-                        src={comment.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(comment.author?.full_name || 'User')}
-                        alt={comment.author?.full_name || 'User'}
+                  src={userProfile?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userProfile?.full_name || 'User')}
+                  alt={userProfile?.full_name || 'User'}
                         className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1]"
                       />
                       
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium text-sm text-[#2C2925]">{comment.author?.full_name || 'Anonymous'}</span>
-                          <span className="text-xs text-[#706C66]">
-                            {new Date(comment.created_at).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </span>
-                        </div>
-                        
-                        <div className="text-[#58534D] whitespace-pre-wrap text-sm">
-                          {comment.content}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Add comment form */}
-            {user ? (
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-3 text-[#2C2925]">Add a comment</h3>
-                <form onSubmit={handleSubmitComment}>
-                  <div className="relative">
+                <div className="flex-1 relative">
                     <textarea
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="Share your thoughts..."
-                      className="w-full border border-[#E8E6E1] rounded-lg p-3 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-[#4A7B61] focus:border-[#4A7B61] resize-none min-h-[100px]"
-                    ></textarea>
+                    placeholder="Add a comment..."
+                    className="w-full px-4 py-3 bg-white border border-[#E8E6E1] rounded-lg text-[#2C2925] placeholder-[#A9A6A1] focus:border-[#4A7B61] focus:ring-1 focus:ring-[#4A7B61] focus:outline-none min-h-[100px]"
+                  />
+                  
                     <button
                       type="submit"
                       disabled={!commentText.trim()}
-                      className="absolute right-2 bottom-2 text-[#4A7B61] hover:text-[#3A6B51] transition-colors disabled:text-[#A9A6A1] disabled:cursor-not-allowed p-2"
+                    className="mt-2 px-4 py-2 bg-[#4A7B61] text-white rounded-md hover:bg-[#3A6B51] transition-colors disabled:bg-[#A9A6A1] disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                      <Send size={18} />
+                    <Send size={16} />
+                    <span>Post Comment</span>
                     </button>
                   </div>
-                </form>
+              </div>
+            </form>
+          ) : (
+            <div className="mb-6 bg-[#F8F7F4] p-4 rounded-lg text-center">
+              <p className="text-[#58534D]">
+                <Link href="/auth/login" className="text-[#4A7B61] font-medium hover:underline">Sign in</Link> to join the conversation.
+              </p>
+            </div>
+          )}
+          
+          {comments.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-[#706C66]">No comments yet. Be the first to share your thoughts!</p>
               </div>
             ) : (
-              <div className="mt-6 p-4 bg-[#4A7B61]/15 rounded-lg text-center">
-                <Link href="/auth/signin" className="font-medium text-[#4A7B61] hover:underline">
-                  Sign in to join the conversation
-                </Link>
+            <div className="space-y-6">
+              {comments.map(comment => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  currentUserId={user?.id || null}
+                  onLikeToggle={handleCommentLikeToggle}
+                  onDeleteComment={handleDeleteComment}
+                  onReply={user ? handleReplyToComment : undefined}
+                />
+              ))}
               </div>
             )}
           </div>
         </div>
-      )}
     </div>
   );
 } 
