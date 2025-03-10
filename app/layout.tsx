@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import LoadingState from './components/LoadingState';
 import { AuthProvider } from './context/auth-context';
 import LayoutEffect from './components/LayoutEffect';
+import { Metadata } from 'next';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -12,7 +13,7 @@ const inter = Inter({
   weight: ['400', '500', '600', '700'],
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Gospel Unbound | Exploring Modern Faith',
   description: 'Progressive Christian perspectives that bridge ancient wisdom with modern understanding through courses, resources and community.',
   icons: {
@@ -20,6 +21,7 @@ export const metadata = {
       { url: '/favicon.ico' },
     ],
   },
+  viewport: 'width=device-width, initial-scale=1, user-scalable=yes'
 };
 
 export const viewport = {

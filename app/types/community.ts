@@ -3,7 +3,7 @@
  * Centralizes all the interfaces used across community components
  */
 
-import { Post, PostComment as BasePostComment, Profile } from '../lib/types';
+import { Post, PostComment as BasePostComment, Profile, CreatePostRequest } from '../lib/types';
 
 /**
  * Extended PostComment type with likes and liked status
@@ -96,7 +96,7 @@ export interface GroupsListProps {
 }
 
 /**
- * Group type extended with membership status
+ * Group type extended with enhanced fields
  */
 export interface Group {
   id: string;
@@ -109,4 +109,73 @@ export interface Group {
   member_count: number;
   is_member?: boolean;
   creator?: Profile;
+  category?: string;
+  topics?: string[];
+}
+
+/**
+ * Props for Group Detail Page
+ */
+export interface GroupDetailProps {
+  group: Group | null;
+  members: GroupMember[];
+  posts: Post[];
+  isLoading: boolean;
+  currentUserId: string | null;
+  currentUser: Profile | null;
+  isAdmin: boolean;
+  isMember: boolean;
+  onToggleMembership: (groupId: string) => void;
+  onCreatePost: (post: CreatePostRequest) => void;
+  onDeletePost: (postId: string) => void;
+}
+
+/**
+ * Group Member with role
+ */
+export interface GroupMember {
+  id: string;
+  user_id: string;
+  group_id: string;
+  role: 'admin' | 'moderator' | 'member';
+  joined_at: string;
+  user: Profile;
+}
+
+/**
+ * Filter options for groups
+ */
+export interface GroupFilters {
+  category?: string;
+  search?: string;
+  sort?: 'newest' | 'popular' | 'alphabetical';
+  topics?: string[];
+}
+
+/**
+ * Props for GroupExplorer component
+ */
+export interface GroupExplorerProps {
+  filters: GroupFilters;
+  onFilterChange: (filters: GroupFilters) => void;
+  groups: Group[];
+  isLoading: boolean;
+  currentUserId: string | null;
+  onToggleMembership: (groupId: string) => void;
+  categories: string[];
+  hasMore: boolean;
+  onLoadMore: () => void;
+}
+
+/**
+ * Props for GroupMembers component
+ */
+export interface GroupMembersProps {
+  members: GroupMember[];
+  isLoading: boolean;
+  groupId: string;
+  currentUserId: string | null;
+  isAdmin: boolean;
+  onRemoveMember?: (userId: string) => void;
+  onChangeMemberRole?: (userId: string, role: string) => void;
 }

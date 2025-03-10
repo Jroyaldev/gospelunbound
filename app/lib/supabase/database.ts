@@ -684,114 +684,94 @@ export async function getPosts(
   }
 }
 
+/**
+ * Get all comments for a post
+ */
+export async function getPostComments(postId: string): Promise<PostComment[]> {
+  const supabase = await createClient();
+  
+  try {
+    const { data: comments, error } = await supabase
+      .from('post_comments')
+      .select(`
+        *,
+        author:profiles(id, username, full_name, avatar_url)
+      `)
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching comments:', error);
+      return [];
+    }
+    
+    return comments || [];
+  } catch (error) {
+    console.error('Error in getPostComments:', error);
+    return [];
+  }
+}
+
+/**
+ * Get a post by ID with full details
+ */
 export async function getPost(
-  postId: string, 
-  userId?: string
+  postId: string,
+  currentUserId?: string
 ): Promise<Post | null> {
   const supabase = await createClient();
-
+  
   try {
-    // Try the original query with the count functions
-    const { data, error } = await supabase
-      .from("posts")
-      .select(
-        `
+    const { data: post, error } = await supabase
+      .from('posts')
+      .select(`
         *,
-        profiles:user_id (id, username, full_name, avatar_url),
-        post_likes(count),
-        comments:post_comments(count)
-      `,
-      )
-      .eq("id", postId)
+        author:profiles(id, username, full_name, avatar_url)
+      `)
+      .eq('id', postId)
       .single();
-
+    
     if (error) {
-      // If error is related to count functions, fall back to a simpler query
-      if (error.code === 'PGRST200' && 
-         (error.message.includes('post_likes') || error.message.includes('post_comments'))) {
-        console.error("Error with count functions, falling back to simple query:", error);
-        
-        // Fallback query without the count function
-        const fallbackResult = await supabase
-          .from("posts")
-          .select(
-            `
-            *,
-            profiles:user_id (id, username, full_name, avatar_url)
-          `,
-          )
-          .eq("id", postId)
-          .single();
-        
-        if (fallbackResult.error) {
-          console.error("Error in fallback query:", fallbackResult.error);
-          return null;
-        }
-        
-        // Get the counts separately
-        const { count: likeCount, error: likeCountError } = await supabase
-          .from("post_likes")
-          .select("*", { count: "exact", head: true })
-          .eq("post_id", postId);
-        
-        const { count: commentCount, error: commentCountError } = await supabase
-          .from("post_comments")
-          .select("*", { count: "exact", head: true })
-          .eq("post_id", postId);
-          
-        // Check if the current user has liked this post
-        let hasLiked = false;
-        if (userId) {
-          const { data: likeData, error: likeError } = await supabase
-            .from("post_likes")
-            .select("id")
-            .eq("user_id", userId)
-            .eq("post_id", postId)
-            .maybeSingle();
-            
-          if (!likeError) {
-            hasLiked = !!likeData;
-          }
-        }
-          
-        return {
-          ...fallbackResult.data,
-          author: fallbackResult.data.profiles,
-          likes: likeCountError ? 0 : (likeCount || 0),
-          comments: commentCountError ? 0 : (commentCount || 0),
-          has_liked: hasLiked,
-          profiles: undefined,
-        } as Post;
-      }
-      
-      console.error("Error fetching post:", error);
+      console.error('Error fetching post:', error);
       return null;
     }
-
-    const post = {
-      ...data,
-      author: data.profiles,
-      likes: data.post_likes?.[0]?.count || 0,
-      comments: data.comments?.[0]?.count || 0,
-      profiles: undefined,
-      post_likes: undefined,
-    } as Post;
     
-    // If userId is provided, check if user has liked this post
-    if (userId) {
-      const { data: likeData, error: likeError } = await supabase
-        .from("post_likes")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("post_id", postId)
-        .maybeSingle();
-        
-      post.has_liked = likeError ? false : !!likeData;
+    // Get like count
+    const { count: likesCount, error: countError } = await supabase
+      .from('post_likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', postId);
+    
+    if (countError) {
+      console.error('Error counting likes:', countError);
     }
     
-    return post;
-  } catch (e) {
-    console.error("Exception in getPost:", e);
+    // Check if current user has liked this post
+    let userHasLiked = false;
+    
+    if (currentUserId) {
+      const { data: likeData, error: likeError } = await supabase
+        .from('post_likes')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+      
+      if (likeError) {
+        console.error('Error checking if user liked post:', likeError);
+      } else {
+        userHasLiked = !!likeData;
+      }
+    }
+    
+    // Return post with like data
+    return {
+      ...post,
+      likes_count: likesCount || 0,
+      user_has_liked: userHasLiked
+    };
+  } catch (error) {
+    console.error('Error in getPost:', error);
     return null;
   }
 }
@@ -1001,147 +981,109 @@ export async function isPostLikedByUser(
 }
 
 // Post Comments
-export async function getPostComments(postId: string): Promise<PostComment[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("post_comments")
-    .select(
-      `
-      *,
-      profiles:user_id (id, username, full_name, avatar_url),
-      comment_likes:comment_likes(count)
-    `,
-    )
-    .eq("post_id", postId)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error("Error fetching post comments:", error);
-    return [];
-  }
-
-  return data.map((comment) => ({
-    ...comment,
-    author: comment.profiles,
-    likes: comment.comment_likes?.[0]?.count || 0,
-    profiles: undefined,
-    comment_likes: undefined,
-  })) as PostComment[];
+export interface CommentData {
+  post_id: string;
+  content: string;
 }
 
+/**
+ * Create a new comment on a post
+ */
 export async function createPostComment(
   userId: string,
-  comment: CreatePostCommentRequest,
+  commentData: CommentData
 ): Promise<PostComment | null> {
   const supabase = await createClient();
-
+  
   try {
-    const { post_id, content, parent_id } = comment;
-
-    const { data, error } = await supabase
-      .from("post_comments")
+    // Get user profile for author data
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (!profile) {
+      console.error('User profile not found');
+      return null;
+    }
+    
+    // Insert the comment
+    const { data: comment, error } = await supabase
+      .from('post_comments')
       .insert({
         user_id: userId,
-        post_id,
-        content,
-        parent_id
+        post_id: commentData.post_id,
+        content: commentData.content,
       })
-      .select(`
-        id,
-        post_id,
-        user_id,
-        content,
-        parent_id,
-        created_at,
-        updated_at,
-        author:user_id(
-          id,
-          username,
-          full_name,
-          avatar_url
-        )
-      `)
+      .select()
       .single();
-
-    if (error) throw error;
-
-    // Revalidate paths
-    revalidatePath(`/community/discussions/${post_id}`);
-    revalidatePath('/community');
-
-    // Use type assertion to handle the author property
-    return {
-      ...data,
-      author: data.author as any
+    
+    if (error) {
+      console.error('Error creating comment:', error);
+      return null;
+    }
+    
+    // Return with author info included
+    return { 
+      ...comment, 
+      author: {
+        id: profile.id,
+        username: profile.username,
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url
+      } 
     };
   } catch (error) {
-    console.error("Error creating comment:", error);
+    console.error('Error in createPostComment:', error);
     return null;
   }
 }
 
+/**
+ * Delete a comment from a post
+ */
 export async function deletePostComment(
   userId: string,
-  commentId: string,
+  commentId: string
 ): Promise<boolean> {
   const supabase = await createClient();
-
-  // First get the comment to know which post to revalidate
-  const { data: comment, error: fetchError } = await supabase
-    .from("post_comments")
-    .select("post_id, user_id")
-    .eq("id", commentId)
-    .single();
-
-  if (fetchError) {
-    console.error("Error fetching comment:", fetchError);
-    return false;
-  }
   
-  // Verify the user owns this comment
-  if (comment.user_id !== userId) {
-    console.error("User does not own this comment");
-    return false;
-  }
-
-  // Find all replies to this comment
-  const { data: replies, error: repliesError } = await supabase
-    .from("post_comments")
-    .select("id")
-    .eq("parent_id", commentId);
-
-  if (repliesError) {
-    console.error("Error fetching replies:", repliesError);
-    // Continue anyway to at least delete the original comment
-  } else if (replies && replies.length > 0) {
-    // Delete all replies
-    const { error: deleteRepliesError } = await supabase
-      .from("post_comments")
-      .delete()
-      .in("id", replies.map(reply => reply.id));
-
-    if (deleteRepliesError) {
-      console.error("Error deleting replies:", deleteRepliesError);
-      // Continue anyway to at least delete the original comment
+  try {
+    // First check if user is the comment owner
+    const { data: comment, error: checkError } = await supabase
+      .from('post_comments')
+      .select('user_id')
+      .eq('id', commentId)
+      .single();
+    
+    if (checkError || !comment) {
+      console.error('Error fetching comment to delete:', checkError);
+      return false;
     }
-  }
-
-  // Delete the original comment
-  const { error } = await supabase
-    .from("post_comments")
-    .delete()
-    .eq("id", commentId);
-
-  if (error) {
-    console.error("Error deleting comment:", error);
+    
+    // Only allow deletion if user is the comment author
+    if (comment.user_id !== userId) {
+      console.error('User not authorized to delete this comment');
+      return false;
+    }
+    
+    // Delete the comment
+    const { error } = await supabase
+      .from('post_comments')
+      .delete()
+      .eq('id', commentId);
+    
+    if (error) {
+      console.error('Error deleting comment:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in deletePostComment:', error);
     return false;
   }
-
-  // Revalidate paths to update UI
-  revalidatePath(`/community/discussions/${comment.post_id}`);
-  revalidatePath('/community');
-  return true;
 }
 
 // Groups
@@ -1585,5 +1527,400 @@ export async function getUserGroupMemberships(userId: string, groupIds: string[]
   } catch (error) {
     console.error("Error in getUserGroupMemberships:", error);
     return new Set();
+  }
+}
+
+/**
+ * Get posts for a specific group
+ */
+export async function getGroupPosts(
+  groupId: string,
+  limit: number = 10,
+  offset: number = 0,
+  userId?: string
+): Promise<Post[]> {
+  console.log(`[getGroupPosts] Fetching posts for group: ${groupId} (userId: ${userId || 'guest'})`);
+  const supabase = await createClient();
+  
+  try {
+    // Get the group name first
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('name')
+      .eq('id', groupId)
+      .single();
+    
+    if (groupError) {
+      console.error('[getGroupPosts] Error fetching group:', groupError);
+      return [];
+    }
+    
+    // Build the query based on title containing group name in brackets
+    // or category matching the group name
+    let query = supabase
+      .from('posts')
+      .select(`
+        *,
+        author:profiles(id, username, full_name, avatar_url)
+      `)
+      .or(`title.ilike.%[${group.name}]%, category.eq.${group.name}`)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+      .range(offset, offset + limit - 1);
+    
+    const { data: posts, error } = await query;
+    
+    if (error) {
+      console.error('[getGroupPosts] Error fetching posts:', error);
+      return [];
+    }
+    
+    console.log(`[getGroupPosts] Retrieved ${posts?.length || 0} raw posts for group: ${groupId}`);
+    
+    // We need to get likes count and comments count for each post
+    // And check if the current user has liked each post
+    if (!posts || posts.length === 0) {
+      return [];
+    }
+    
+    const postIds = posts.map(post => post.id);
+    
+    // Get likes for all posts and count them ourselves
+    const { data: allLikes, error: likesError } = await supabase
+      .from('post_likes')
+      .select('post_id')
+      .in('post_id', postIds);
+    
+    if (likesError) {
+      console.error('[getGroupPosts] Error getting likes data:', likesError);
+    }
+    
+    // Count likes for each post
+    const likesCountMap: Record<string, number> = {};
+    if (allLikes) {
+      for (const like of allLikes) {
+        likesCountMap[like.post_id] = (likesCountMap[like.post_id] || 0) + 1;
+      }
+    }
+    
+    // Get comments for all posts and count them ourselves
+    const { data: allComments, error: commentsError } = await supabase
+      .from('post_comments')
+      .select('post_id')
+      .in('post_id', postIds);
+    
+    if (commentsError) {
+      console.error('[getGroupPosts] Error getting comments data:', commentsError);
+    }
+    
+    // Count comments for each post
+    const commentsCountMap: Record<string, number> = {};
+    if (allComments) {
+      for (const comment of allComments) {
+        commentsCountMap[comment.post_id] = (commentsCountMap[comment.post_id] || 0) + 1;
+      }
+    }
+    
+    // If we have a userId, get which posts they've liked
+    let userLikesMap: Record<string, boolean> = {};
+    
+    if (userId) {
+      const { data: userLikes, error: userLikesError } = await supabase
+        .from('post_likes')
+        .select('post_id')
+        .in('post_id', postIds)
+        .eq('user_id', userId);
+      
+      if (userLikesError) {
+        console.error('[getGroupPosts] Error getting user likes:', userLikesError);
+      } else {
+        userLikesMap = (userLikes || []).reduce((acc, item) => {
+          acc[item.post_id] = true;
+          return acc;
+        }, {} as Record<string, boolean>);
+      }
+    }
+    
+    // Enhance each post with likes, comments, and user_has_liked
+    const enhancedPosts = posts.map(post => ({
+      ...post,
+      likes_count: likesCountMap[post.id] || 0,
+      comments_count: commentsCountMap[post.id] || 0,
+      user_has_liked: userLikesMap[post.id] || false
+    }));
+    
+    console.log(`[getGroupPosts] Returning ${enhancedPosts.length} enhanced posts with likes and comments counts`);
+    return enhancedPosts;
+  } catch (error) {
+    console.error('[getGroupPosts] Exception in getGroupPosts:', error);
+    return [];
+  }
+}
+
+// Create a post in a group
+export async function createGroupPost(
+  userId: string,
+  groupId: string,
+  post: CreatePostRequest,
+): Promise<Post | null> {
+  const supabase = await createClient();
+
+  try {
+    // Check if user is a member of the group
+    const isMember = await isGroupMember(userId, groupId);
+    if (!isMember) {
+      console.error("User is not a member of the group");
+      return null;
+    }
+
+    // Get the group name
+    const { data: group, error: groupError } = await supabase
+      .from("groups")
+      .select("name")
+      .eq("id", groupId)
+      .single();
+
+    if (groupError) {
+      console.error("Error fetching group:", groupError);
+      return null;
+    }
+
+    // Create post with group info in title and category
+    const { data: newPost, error: postError } = await supabase
+      .from("posts")
+      .insert({
+        user_id: userId,
+        title: `[${group.name}] ${post.title}`,
+        content: post.content,
+        image_url: post.image_url,
+        category: group.name, // Use group name as category for easy filtering
+        tags: post.tags,
+      })
+      .select()
+      .single();
+
+    if (postError) {
+      console.error("Error creating post:", postError);
+      return null;
+    }
+
+    // Get the post with profile info
+    const { data: fullPost, error: getError } = await supabase
+      .from("posts")
+      .select(
+        `
+        *,
+        profiles:user_id (id, username, full_name, avatar_url)
+      `
+      )
+      .eq("id", newPost.id)
+      .single();
+
+    if (getError) {
+      console.error("Error retrieving created post:", getError);
+      return newPost as Post; // Return basic post if we can't get the full one
+    }
+
+    revalidatePath(`/community/groups/${groupId}`);
+    
+    return {
+      ...fullPost,
+      author: fullPost.profiles,
+      profiles: undefined,
+    } as Post;
+  } catch (e) {
+    console.error("Exception in createGroupPost:", e);
+    return null;
+  }
+}
+
+// Enhanced getGroups function with additional filtering options
+export async function getGroupsWithFilters(
+  limit: number = 20,
+  offset: number = 0,
+  filters: {
+    category?: string;
+    search?: string;
+    sort?: 'newest' | 'popular' | 'alphabetical';
+    topics?: string[];
+  } = {},
+): Promise<Group[]> {
+  const supabase = await createClient();
+
+  try {
+    // Build the query with all common parts
+    let query = supabase
+      .from("groups")
+      .select(
+        `
+        *,
+        profiles:created_by_user_id (id, username, full_name, avatar_url),
+        group_members(count)
+      `,
+      )
+      .eq("is_private", false); // Only get public groups in the main listing
+
+    // Apply category filter if provided
+    if (filters.category) {
+      query = query.eq("category", filters.category);
+    }
+
+    // Apply search filter if provided
+    if (filters.search && filters.search.trim() !== '') {
+      const searchTerm = `%${filters.search.trim()}%`;
+      query = query.or(`name.ilike.${searchTerm},description.ilike.${searchTerm}`);
+    }
+
+    // Apply topics filter if provided
+    if (filters.topics && filters.topics.length > 0) {
+      // This uses the contains operator for array fields
+      query = query.contains('topics', filters.topics);
+    }
+
+    // Apply sorting
+    if (filters.sort === 'alphabetical') {
+      query = query.order("name", { ascending: true });
+    } else if (filters.sort === 'popular') {
+      // First fetch the data without sorting by popularity
+      // We'll manually sort by member count after
+      query = query.order("created_at", { ascending: false });
+    } else {
+      // Default to newest
+      query = query.order("created_at", { ascending: false });
+    }
+
+    // Apply pagination
+    query = query.range(offset, offset + limit - 1);
+
+    // Execute the query
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching groups with filters:", error);
+      return [];
+    }
+
+    // Transform the data
+    const transformedGroups = data.map((group) => ({
+      ...group,
+      creator: group.profiles,
+      members: group.group_members?.[0]?.count || 0,
+      profiles: undefined,
+      group_members: undefined,
+    })) as Group[];
+
+    // If sorting by popularity, we need to sort manually
+    if (filters.sort === 'popular') {
+      return transformedGroups.sort((a, b) => (b.members || 0) - (a.members || 0));
+    }
+
+    return transformedGroups;
+  } catch (e) {
+    console.error("Exception in getGroupsWithFilters:", e);
+    return [];
+  }
+}
+
+// Get recommended groups for a user based on their interests and activity
+export async function getRecommendedGroups(
+  userId: string,
+  limit: number = 5
+): Promise<Group[]> {
+  const supabase = await createClient();
+
+  try {
+    // Get user's groups to exclude them
+    const { data: userGroups, error: userGroupsError } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_id', userId);
+
+    if (userGroupsError) {
+      console.error("Error fetching user groups:", userGroupsError);
+      return [];
+    }
+
+    const userGroupIds = userGroups.map(g => g.group_id);
+
+    // Get public groups not joined by the user, ordered by member count
+    const { data, error } = await supabase
+      .from("groups")
+      .select(
+        `
+        *,
+        profiles:created_by_user_id (id, username, full_name, avatar_url),
+        group_members(count)
+      `,
+      )
+      .eq("is_private", false)
+      .not('id', 'in', `(${userGroupIds.join(',')})`)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("Error fetching recommended groups:", error);
+      return [];
+    }
+
+    // Transform the data
+    const recommendedGroups = data.map((group) => ({
+      ...group,
+      creator: group.profiles,
+      members: group.group_members?.[0]?.count || 0,
+      profiles: undefined,
+      group_members: undefined,
+    })) as Group[];
+
+    // Sort by member count (popularity)
+    return recommendedGroups.sort((a, b) => (b.members || 0) - (a.members || 0));
+  } catch (e) {
+    console.error("Exception in getRecommendedGroups:", e);
+    return [];
+  }
+}
+
+/**
+ * Check if a post belongs to a specific group
+ */
+export async function isPostInGroup(
+  postId: string,
+  groupId: string
+): Promise<boolean> {
+  const supabase = await createClient();
+  
+  try {
+    // Get the group name
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('name')
+      .eq('id', groupId)
+      .single();
+    
+    if (groupError || !group) {
+      console.error('Error fetching group:', groupError);
+      return false;
+    }
+    
+    // Get the post
+    const { data: post, error: postError } = await supabase
+      .from('posts')
+      .select('title, category')
+      .eq('id', postId)
+      .single();
+    
+    if (postError || !post) {
+      console.error('Error fetching post:', postError);
+      return false;
+    }
+    
+    // Check if the post title contains the group name in brackets
+    // or if the category matches the group name
+    const groupNameInTitle = post.title.includes(`[${group.name}]`);
+    const categoryIsGroup = post.category === group.name;
+    
+    return groupNameInTitle || categoryIsGroup;
+  } catch (error) {
+    console.error('Error in isPostInGroup:', error);
+    return false;
   }
 }

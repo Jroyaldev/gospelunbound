@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Users } from 'lucide-react';
+import { Users, MessageSquare, Calendar, Tag } from 'lucide-react';
 import { GroupCardProps } from '@/app/types/community';
 
 /**
@@ -10,9 +10,11 @@ import { GroupCardProps } from '@/app/types/community';
  * 
  * Features:
  * - Displays group name, description, and image
- * - Shows member count
+ * - Shows member count and activity indicators
+ * - Shows category and topics
  * - Join/leave button for logged-in users
  * - Link to group details
+ * - Modern, dynamic design optimized for student engagement
  */
 const GroupCard: React.FC<GroupCardProps> = ({
   group,
@@ -31,11 +33,18 @@ const GroupCard: React.FC<GroupCardProps> = ({
     onToggleMembership(group.id);
   };
   
+  // Format creation date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
+  
   return (
-    <div className="bg-white rounded-lg border border-[#E8E6E1] shadow-sm hover:shadow-md transition-shadow overflow-hidden relative h-[180px] mb-4">
+    <div className="bg-white rounded-lg border border-[#E8E6E1] shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden relative h-[240px] mb-4">
       {/* Group cover image */}
       <div 
-        className="h-1/2 bg-[#F4F2ED] relative"
+        className="h-1/3 bg-[#F4F2ED] relative"
         style={group.image_url ? { backgroundImage: `url(${group.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
       >
         {!group.image_url && (
@@ -43,31 +52,78 @@ const GroupCard: React.FC<GroupCardProps> = ({
             <Users size={32} className="text-[#706C66]" />
           </div>
         )}
+        
+        {/* Category badge */}
+        {group.category && (
+          <div className="absolute top-2 left-2">
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-[#4A7B61]/20 text-[#4A7B61] backdrop-blur-sm">
+              <Tag size={10} className="mr-1" />
+              {group.category}
+            </span>
+          </div>
+        )}
+        
+        {/* Date badge */}
+        <div className="absolute top-2 right-2">
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-black/20 text-white backdrop-blur-sm">
+            <Calendar size={10} className="mr-1" />
+            {formatDate(group.created_at)}
+          </span>
+        </div>
       </div>
       
       {/* Group content */}
-      <div className="p-3 absolute bottom-0 left-0 right-0 bg-white">
-        <h3 className="font-semibold text-[#2C2925] line-clamp-1">{group.name}</h3>
+      <div className="p-4 h-2/3 flex flex-col">
+        <h3 className="font-semibold text-[#2C2925] line-clamp-1 text-lg">{group.name}</h3>
         
-        <div className="flex items-center text-xs text-[#706C66] mt-1">
-          <Users size={12} className="mr-1" />
-          <span>{memberCountDisplay}</span>
+        {/* Stats row */}
+        <div className="flex items-center gap-3 text-xs text-[#706C66] mt-1.5">
+          <div className="flex items-center">
+            <Users size={12} className="mr-1" />
+            <span>{memberCountDisplay}</span>
+          </div>
+          
+          <div className="flex items-center">
+            <MessageSquare size={12} className="mr-1" />
+            <span>Discussions</span>
+          </div>
         </div>
         
-        <p className="text-sm text-[#58534D] mt-1.5 line-clamp-2">
+        {/* Description */}
+        <p className="text-sm text-[#58534D] mt-2 line-clamp-3 flex-grow">
           {group.description}
         </p>
         
+        {/* Topics */}
+        {group.topics && group.topics.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1 mb-2">
+            {group.topics.slice(0, 3).map((topic, index) => (
+              <span
+                key={index}
+                className="inline-block px-1.5 py-0.5 text-xs bg-[#F4F2ED] text-[#706C66] rounded-full truncate max-w-[80px]"
+              >
+                {topic}
+              </span>
+            ))}
+            {group.topics.length > 3 && (
+              <span className="inline-block px-1.5 py-0.5 text-xs bg-[#F4F2ED] text-[#706C66] rounded-full">
+                +{group.topics.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+        
+        {/* Join/Leave button */}
         {currentUserId && (
           <button
             onClick={handleMembershipToggle}
-            className={`text-sm font-medium px-4 py-2 rounded-full transition-all ${
+            className={`text-sm font-medium px-4 py-1.5 rounded-full transition-all mt-auto ${
               group.is_member 
-                ? 'bg-red-100/80 text-red-600 hover:bg-red-100 border border-red-200' 
-                : 'bg-[#4A7B61]/15 text-[#4A7B61] hover:bg-[#4A7B61]/20 border border-[#4A7B61]/20'
+                ? 'bg-[#4A7B61]/10 text-[#4A7B61] hover:bg-[#4A7B61]/20 border border-[#4A7B61]/20' 
+                : 'bg-[#4A7B61] text-white hover:bg-[#3A6B51]'
             }`}
           >
-            {group.is_member ? 'Leave' : 'Join'}
+            {group.is_member ? 'Joined' : 'Join'}
           </button>
         )}
       </div>

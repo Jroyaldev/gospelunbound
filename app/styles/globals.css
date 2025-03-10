@@ -1,0 +1,153 @@
+/* Add mobile-friendly touch styles at the end of the file */
+
+/* Mobile touch improvements */
+@media (max-width: 768px) {
+  /* Ensure buttons and interactive elements have proper touch targets */
+  button, 
+  a[role="button"],
+  .interactive {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remove hover effects that can cause issues on touch devices */
+  button:hover,
+  a:hover {
+    /* Use active states instead for touch feedback */
+    transition: none;
+  }
+  
+  /* Improve tap highlight color for better feedback */
+  * {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Ensure post actions are clearly tappable */
+  .post-actions button,
+  .post-actions a {
+    padding: 8px 12px;
+    margin: 0 4px;
+  }
+  
+  /* Enhanced touch feedback */
+  button:active,
+  a:active {
+    transform: scale(0.98);
+  }
+  
+  /* Improve readability on mobile */
+  h1, h2, h3 {
+    letter-spacing: -0.01em;
+  }
+  
+  /* Clean spacing for mobile */
+  .mobile-spacing {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+} 
+
+/* Add smooth transitions and animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Apply basic transitions to interactive elements */
+button, 
+a,
+.interactive {
+  transition: all 0.2s ease;
+}
+
+/* Add animations for UI elements */
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+.animate-pulse {
+  animation: pulse 0.6s ease-in-out;
+}
+
+/* Hide scrollbars while allowing scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Premium card styling */
+.premium-card {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.premium-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+}
+
+/* Add subtle hover effects for desktop */
+@media (min-width: 769px) {
+  .hover-lift {
+    transition: transform 0.2s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+  
+  /* Subtle zoom effect on images */
+  .zoom-hover img {
+    transition: transform 0.3s ease;
+  }
+  
+  .zoom-hover:hover img {
+    transform: scale(1.05);
+  }
+}
+
+/* Premium typography improvements */
+.prose h1, .prose h2, .prose h3 {
+  font-weight: 700;
+  color: #2C2925;
+  letter-spacing: -0.02em;
+}
+
+.prose p {
+  line-height: 1.7;
+}
+
+/* Gradient background effect */
+.bg-gradient-premium {
+  background: linear-gradient(135deg, #F8F7F2 0%, #F4F2ED 100%);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.15);
+} 

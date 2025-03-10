@@ -298,258 +298,263 @@ const MobilePost = ({
   };
 
   return (
-    <div className="border-b border-[#E8E6E1] px-3 py-4 hover:bg-[#FAFAFA] transition-colors">
-      <div 
-        className="flex gap-3 relative"
-        onClick={(e) => {
-          // Prevent navigation when comments are open
-          if (!showComments) {
-            onViewPost(post.id);
-          }
-        }}
-      >
-        {/* User avatar */}
-        <img
-          src={post.author?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author?.full_name || 'User')}
-          alt={post.author?.full_name || 'User'}
-          className="w-12 h-12 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1]"
-        />
-        
-        {/* Post content */}
-        <div className="flex-1 min-w-0">
-          {/* Author info and date */}
-          <div className="flex items-center">
-            <span className="font-bold text-[15px] text-[#2C2925]">
-              {post.author?.full_name || 'Anonymous'}
-            </span>
-            <span className="text-[#706C66] text-[14px] ml-1.5">
-              · {getTimeElapsed()}
-            </span>
-            
-            {/* Add post options menu if user is the author */}
-            {currentUserId && post.author?.id === currentUserId && onPostDelete && (
-              <div className="ml-auto" onClick={(e) => e.stopPropagation()}>
-                <PostActionMenu 
-                  postId={post.id} 
-                  onDelete={() => {
-                    if (onPostDelete) {
-                      if (confirm('Are you sure you want to delete this post?')) {
-                        onPostDelete(post.id);
-                        setToast('Post deleted successfully');
-                      }
-                    }
-                  }}
-                />
+    <div className="bg-white mb-4 rounded-xl border border-[#E8E6E1] shadow-sm overflow-hidden">
+      {/* Post header with user info */}
+      <div className="p-4 flex items-center justify-between border-b border-[#E8E6E1]">
+        <div className="flex items-center">
+          {/* User avatar */}
+          <div className="w-10 h-10 rounded-full bg-[#F4F2ED] overflow-hidden mr-3">
+            {post.author?.avatar_url ? (
+              <img 
+                src={post.author.avatar_url} 
+                alt={post.author.username || 'User'}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-[#E8E6E1] text-[#706C66]">
+                {post.author?.username?.charAt(0)?.toUpperCase() || 'U'}
               </div>
             )}
           </div>
           
-          {/* Post title & content combined */}
-          {post.title && (
-            <h3 className="font-bold text-[16px] mt-1 text-[#2C2925]">
-              {post.title}
-            </h3>
-          )}
-          
-          {/* Post content */}
-          <p className="text-[#2C2925] text-[15px] mt-1 mb-2 break-words leading-snug line-clamp-5">
-            {displayText}
-          </p>
-          
-          {/* Category tag */}
-          {post.category && (
-            <div className="mb-2 mt-1">
-              <span className="text-sm px-4 py-1.5 rounded-full bg-[#E8F5EE] text-[#4A7B61] font-medium hover:bg-[#dcf0e6] transition-colors">
-                {post.category}
-              </span>
+          {/* User name and post time */}
+          <div>
+            <div className="font-medium text-[#2C2925]">
+              {post.author?.full_name || post.author?.username || 'Anonymous'}
             </div>
-          )}
-          
-          {/* Action buttons */}
-          <div className="flex items-center gap-6 mt-3 text-[#706C66]">
-            <button 
-              onClick={handleLikeClick}
-              className="flex items-center gap-2 group"
-              aria-label={post.has_liked ? "Unlike" : "Like"}
-            >
-              <div className={isLikeAnimating ? "animate-heartbeat" : ""}>
-                <HeartIcon isLiked={post.has_liked} />
-              </div>
-              <span className={`text-base ${post.has_liked ? "text-[#E74C3C]" : "text-[#706C66] group-hover:text-[#4A7B61]"} transition-colors`}>
-                {post.likes || 0}
-              </span>
-            </button>
-            
-            <button 
-              onClick={handleToggleComments}
-              className="flex items-center gap-2 group hover:text-[#4A7B61] transition-colors"
-              aria-label="Comments"
-            >
-              <CommentIcon />
-              <span className="text-base group-hover:text-[#4A7B61] transition-colors">{post.comments || 0}</span>
-            </button>
-            
-            <button 
-              onClick={handleShare}
-              className="flex items-center gap-1.5 hover:text-[#4A7B61] active:scale-95 transition-all"
-              aria-label="Share"
-            >
-              <Share2 size={18} />
-            </button>
+            <div className="text-xs text-[#706C66]">{getTimeElapsed()}</div>
+          </div>
+        </div>
+        
+        {/* Post actions menu */}
+        {currentUserId === post.user_id && onPostDelete && (
+          <PostActionMenu postId={post.id} onDelete={() => onPostDelete(post.id)} />
+        )}
+      </div>
+      
+      {/* Post content */}
+      <div className="p-4" onClick={() => onViewPost(post.id)}>
+        {/* Post title - if exists */}
+        {post.title && (
+          <h3 className="text-lg font-semibold text-[#2C2925] mb-2">{post.title}</h3>
+        )}
+        
+        {/* Post text - show full content with proper formatting */}
+        <div className="text-[#58534D] whitespace-pre-line">
+          {displayText}
+        </div>
+        
+        {/* Post metrics - likes and comments count */}
+        <div className="flex items-center mt-4 text-xs text-[#706C66]">
+          <div className="flex items-center">
+            <HeartIcon isLiked={post.has_liked} />
+            <span className="ml-1">{post.likes || 0}</span>
+          </div>
+          <div className="mx-2">•</div>
+          <div className="flex items-center">
+            <CommentIcon />
+            <span className="ml-1">{comments.length} comments</span>
           </div>
         </div>
       </div>
-
-      {/* Comments Section */}
+      
+      {/* Action buttons */}
+      <div className="border-t border-[#E8E6E1] flex">
+        <button
+          onClick={handleLikeClick}
+          className={`flex-1 py-3 flex items-center justify-center gap-2 ${
+            post.has_liked 
+              ? 'text-red-500 font-medium' 
+              : 'text-[#706C66]'
+          } transition-colors active:bg-[#F8F7F2]`}
+        >
+          <HeartIcon 
+            isLiked={post.has_liked} 
+            className={`${isLikeAnimating ? 'animate-heartbeat' : ''}`} 
+          />
+          <span>Like</span>
+        </button>
+        
+        <button
+          onClick={handleToggleComments}
+          className="flex-1 py-3 flex items-center justify-center gap-2 text-[#706C66] transition-colors active:bg-[#F8F7F2]"
+        >
+          <CommentIcon />
+          <span>Comment</span>
+        </button>
+        
+        <button
+          onClick={handleShare}
+          className="flex-1 py-3 flex items-center justify-center gap-2 text-[#706C66] transition-colors active:bg-[#F8F7F2]"
+        >
+          <Share2 size={20} />
+          <span>Share</span>
+        </button>
+      </div>
+      
+      {/* Comments section */}
       {showComments && (
-        <div className="mt-3 pt-3 border-t border-[#E8E6E1] pl-12">
-          {/* Loading state */}
+        <div className="bg-[#F8F7F2] border-t border-[#E8E6E1] p-4">
+          {/* Comment form */}
+          {currentUserId && onAddComment && (
+            <form onSubmit={handleSubmitComment} className="mb-4">
+              <div className="flex">
+                <div className="w-8 h-8 rounded-full bg-[#F4F2ED] overflow-hidden mr-2 shrink-0">
+                  {post.currentUser?.avatar_url ? (
+                    <img 
+                      src={post.currentUser.avatar_url} 
+                      alt={post.currentUser.username || 'You'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-[#E8E6E1] text-[#706C66]">
+                      {post.currentUser?.username?.charAt(0)?.toUpperCase() || 'Y'}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="relative flex-grow">
+                  <input
+                    type="text"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Write a comment..."
+                    className="w-full bg-white border border-[#E8E6E1] rounded-full pl-4 pr-12 py-2 text-sm focus:outline-none focus:border-[#4A7B61] focus:ring-1 focus:ring-[#4A7B61]"
+                  />
+                  
+                  <button
+                    type="submit"
+                    disabled={!commentText.trim()}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#4A7B61] p-1 rounded-full disabled:opacity-50 disabled:text-[#706C66]"
+                  >
+                    <Send size={18} />
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+          
+          {/* Comments list */}
           {isLoadingComments ? (
-            <div className="flex justify-center items-center py-4">
+            <div className="flex justify-center items-center py-6">
               <div className="w-5 h-5 border-2 border-[#4A7B61] border-t-transparent rounded-full animate-spin"></div>
+              <span className="ml-2 text-sm text-[#706C66]">Loading comments...</span>
             </div>
           ) : comments.length === 0 ? (
-            <div className="py-3 px-4 rounded-lg bg-[#F5F5F5] text-center">
-              <p className="text-[#706C66] text-sm">No comments yet. Be the first to comment!</p>
+            <div className="py-6 text-center">
+              <p className="text-sm text-[#706C66]">No comments yet</p>
+              <p className="text-xs text-[#706C66] mt-1">Be the first to comment</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {comments.map(comment => (
-                <div key={comment.id} className="flex gap-2 group">
-                  <img
-                    src={comment.author?.avatar_url || 'https://ui-avatars.com/api/?name=User'}
-                    alt={comment.author?.full_name || 'User'}
-                    className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1]"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center">
-                      <span className="font-medium text-sm text-[#2C2925]">{comment.author?.full_name || 'Anonymous'}</span>
-                      <span className="text-xs text-[#706C66] ml-1.5">
-                        · {new Date(comment.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </span>
-                      
-                      {/* Add three-dot menu for comment actions if user is author */}
-                      {currentUserId && comment.author?.id === currentUserId && (
-                        <CommentActionMenu 
-                          commentId={comment.id} 
-                          onDelete={() => {
-                            if (onCommentDelete && comment.id) {
-                              if (confirm('Are you sure you want to delete this comment?')) {
-                                // Remove comment from local state immediately
-                                setComments(comments.filter(c => c.id !== comment.id));
-                                // Call API to delete from database
-                                onCommentDelete(comment.id).catch((error) => {
-                                  console.error('Error deleting comment:', error);
-                                  // If error, refetch comments
-                                  if (onToggleComments) {
-                                    onToggleComments(post.id).then(fetchedComments => {
-                                      setComments(fetchedComments);
-                                    });
-                                  }
-                                });
-                                setToast('Comment deleted successfully');
-                              }
-                            }
-                          }}
+              {comments.map((comment) => (
+                <div key={comment.id} className="bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex">
+                    {/* Comment author avatar */}
+                    <div className="w-8 h-8 rounded-full bg-[#F4F2ED] overflow-hidden mr-2 shrink-0">
+                      {comment.author?.avatar_url ? (
+                        <img 
+                          src={comment.author.avatar_url} 
+                          alt={comment.author.username || 'User'}
+                          className="w-full h-full object-cover"
                         />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-[#E8E6E1] text-[#706C66]">
+                          {comment.author?.username?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
                       )}
                     </div>
-                    <p className="text-sm text-[#2C2925] mt-0.5 mb-1.5 break-words">{comment.content}</p>
-                    <button
-                      onClick={() => {
-                        if (currentUserId && onCommentLike && comment.id) {
-                          // Clone the current comments array
-                          const updatedComments = [...comments];
-                          
-                          // Find the comment to update
-                          const commentIndex = updatedComments.findIndex(c => c.id === comment.id);
-                          if (commentIndex > -1) {
-                            // Toggle has_liked and update likes count
-                            const oldHasLiked = updatedComments[commentIndex].has_liked || false;
-                            updatedComments[commentIndex].has_liked = !oldHasLiked;
-                            updatedComments[commentIndex].likes = (updatedComments[commentIndex].likes || 0) + (oldHasLiked ? -1 : 1);
-                          }
-                          
-                          // Update state with the new array (proper React pattern)
-                          setComments(updatedComments);
-                          
-                          // Call the API to update the database
-                          onCommentLike(comment.id).catch((error) => {
-                            console.error('Error toggling comment like:', error);
-                            // Revert to previous state if API call fails
-                            setComments(comments);
-                          });
-                        }
-                      }}
-                      className="flex items-center gap-1.5 text-xs text-[#706C66] hover:text-[#4A7B61] transition-colors"
-                    >
-                      <HeartIcon isLiked={comment.has_liked} />
-                      <span>{comment.likes || 0}</span>
-                    </button>
+                    
+                    <div className="flex-grow">
+                      <div className="bg-[#F8F7F2] rounded-lg p-2 mb-1">
+                        <div className="font-medium text-sm text-[#2C2925]">
+                          {comment.author?.full_name || comment.author?.username || 'Anonymous'}
+                        </div>
+                        <div className="text-sm text-[#58534D]">{comment.content}</div>
+                      </div>
+                      
+                      <div className="flex items-center text-xs text-[#706C66] pl-2">
+                        <button
+                          onClick={() => onCommentLike && onCommentLike(comment.id)}
+                          className={`mr-3 ${comment.has_liked ? 'text-red-500' : ''}`}
+                        >
+                          Like
+                        </button>
+                        {/* Timestamp */}
+                        <span className="text-xs">
+                          {new Date(comment.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                        
+                        {/* Delete option - only for comment author */}
+                        {currentUserId === comment.user_id && onCommentDelete && (
+                          <div className="ml-auto">
+                            <CommentActionMenu 
+                              commentId={comment.id} 
+                              onDelete={() => onCommentDelete(comment.id)} 
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-          
-          {/* Add comment form */}
-          {currentUserId && onAddComment && (
-            <form onSubmit={handleSubmitComment} className="mt-4 mb-2 flex items-center gap-2">
-              <img
-                src={post.currentUser?.avatar_url || 'https://ui-avatars.com/api/?name=User'}
-                alt="Your avatar"
-                className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[#E8E6E1]"
-              />
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Add a comment..."
-                  className="w-full border border-[#E8E6E1] rounded-full py-2 px-4 pr-11 text-sm focus:outline-none focus:ring-1 focus:ring-[#4A7B61] bg-[#F8F8F8] transition-all"
-                />
-                <button
-                  type="submit"
-                  disabled={!commentText.trim()}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4A7B61] disabled:text-[#A9A6A1] hover:text-[#3A6B51] transition-colors p-1.5"
-                >
-                  <Send size={16} />
-                </button>
-              </div>
-            </form>
-          )}
         </div>
       )}
-
-      {/* Toast message */}
+      
+      {/* Toast notifications */}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 };
 
-// Custom heart icon that looks more like the one in the screenshot
-const HeartIcon = ({ isLiked }: { isLiked?: boolean }) => {
-  return isLiked ? (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="#E74C3C" stroke="none" className="text-[#E74C3C]">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  ) : (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:text-[#4A7B61] transition-colors">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-};
+// Add this CSS animation to globals.css or add it inline here
+// @keyframes heartbeat {
+//   0% { transform: scale(1); }
+//   25% { transform: scale(1.3); }
+//   50% { transform: scale(1); }
+//   75% { transform: scale(1.3); }
+//   100% { transform: scale(1); }
+// }
 
-// Custom comment icon
-const CommentIcon = () => {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:text-[#4A7B61] transition-colors">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-};
+// Update these icon components to be more modern
+const HeartIcon = ({ isLiked, className = '' }: { isLiked?: boolean, className?: string }) => (
+  <svg 
+    className={`w-5 h-5 ${className}`} 
+    fill={isLiked ? 'currentColor' : 'none'} 
+    stroke="currentColor" 
+    viewBox="0 0 24 24" 
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      strokeWidth={2} 
+      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+    />
+  </svg>
+);
+
+const CommentIcon = () => (
+  <svg 
+    className="w-5 h-5" 
+    fill="none" 
+    stroke="currentColor" 
+    viewBox="0 0 24 24" 
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      strokeWidth={2} 
+      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" 
+    />
+  </svg>
+);
 
 export default MobilePost; 

@@ -19,7 +19,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = 'Search discussions...'
 }) => {
   const [inputValue, setInputValue] = useState(searchQuery);
+  const [isFocused, setIsFocused] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Update the input value when searchQuery prop changes
   useEffect(() => {
@@ -46,7 +48,16 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const handleClearSearch = () => {
     setInputValue('');
     onSearchChange('');
+    
+    // Focus the input after clearing
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
+  
+  // Handle focus events
+  const handleFocus = () => setIsFocused(true);
+  const handleBlur = () => setIsFocused(false);
   
   // Clean up timer when component unmounts
   useEffect(() => {
@@ -58,27 +69,30 @@ const SearchBar: React.FC<SearchBarProps> = ({
   }, []);
   
   return (
-    <div className="relative mb-6">
-      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-        <Search size={18} className="text-[#706C66]" />
+    <div className={`relative transition-all ${isFocused ? 'ring-2 ring-[#4A7B61]/20 rounded-lg' : ''}`}>
+      <div className={`absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none transition-colors ${isFocused ? 'text-[#4A7B61]' : 'text-[#706C66]'}`}>
+        <Search size={20} />
       </div>
       
       <input
+        ref={inputRef}
         type="search"
-        className="w-full p-3 pl-10 pr-10 text-sm text-[#2C2925] bg-white border border-[#E8E6E1] rounded-lg focus:ring-[#4A7B61] focus:border-[#4A7B61] focus:outline-none transition-all"
+        className="w-full p-3.5 pl-11 pr-11 text-[#2C2925] bg-white border border-[#E8E6E1] rounded-lg focus:ring-[#4A7B61] focus:border-[#4A7B61] focus:outline-none transition-all placeholder:text-[#706C66]/60"
         placeholder={placeholder}
         value={inputValue}
         onChange={handleInputChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         aria-label="Search"
       />
       
       {inputValue && (
         <button
           onClick={handleClearSearch}
-          className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#706C66] hover:text-[#2C2925]"
+          className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#706C66] hover:text-[#2C2925] transition-colors active:scale-95"
           aria-label="Clear search"
         >
-          <X size={18} />
+          <X size={20} />
         </button>
       )}
     </div>
