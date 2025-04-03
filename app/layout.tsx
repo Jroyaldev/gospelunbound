@@ -53,6 +53,18 @@ export default function RootLayout({
             document.documentElement.className += ' js-loaded';
           })();
         `}} />
+
+        {/* Otto Pixel Script */}
+        <script
+          nowprocket
+          nitro-exclude
+          type="text/javascript"
+          id="sa-dynamic-optimization"
+          data-uuid="e60352bf-cd40-4811-b539-b69553a2ce7c"
+          dangerouslySetInnerHTML={{
+            __html: `var script = document.createElement("script");script.setAttribute("nowprocket", "");script.setAttribute("nitro-exclude", "");script.src = "https://dashboard.searchatlas.com/scripts/dynamic_optimization.js";script.dataset.uuid = "e60352bf-cd40-4811-b539-b69553a2ce7c";script.id = "sa-dynamic-optimization-loader";document.head.appendChild(script);`
+          }}
+        />
       </head>
       <body className="text-foreground h-full antialiased overflow-x-hidden">
         <AuthProvider>
